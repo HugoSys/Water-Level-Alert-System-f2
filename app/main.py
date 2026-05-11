@@ -112,7 +112,7 @@ async def get_vialidades():
     ruta = "SHP/Vialidad/Vialidades.shp"
     if not os.path.exists(ruta):
         # Intento con nombre en singular si falla el plural
-        ruta = "SHP/Vialidad/Vialidad.shp"
+        ruta = "SHP/Vialidad/Vialidades.shp"
         
     if os.path.exists(ruta):
         df = gpd.read_file(ruta).to_crs(epsg=4326)
