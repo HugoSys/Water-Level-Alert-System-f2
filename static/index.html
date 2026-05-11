@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Pluvial - Cd. Juárez</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --dark: #2c3e50;
+            --accent: #f1c40f;
+            --white: #ffffff;
+            --danger: #c0392b;
+            --hospital: #e74c3c;
+            --comunitario: #9b59b6;
+            --escuela: #2980b9;
+        }
+        
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; overflow: hidden; }
+        
+        .header { 
+            background: var(--dark); 
+            color: var(--white); 
+            padding: 15px; 
+            text-align: center; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header h1 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; }
+
+        .stats-bar { 
+            background: #34495e; 
+            color: var(--accent); 
+            padding: 8px; 
+            font-size: 0.85rem; 
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+            display: inline-block;
+            border-radius: 4px;
+        }
+
+        #map { height: calc(100vh - 110px); width: 100%; background: #ddd; }
+
+        #panel-riesgo {
+            position: absolute;
+            top: 130px;
+            left: 20px;
+            width: 260px;
+            max-height: 55vh;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            z-index: 1000;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border-left: 6px solid var(--danger);
+            overflow-y: auto;
+        }
+
+        #panel-riesgo h2 { font-size: 1rem; margin: 0 0 10px 0; color: var(--danger); border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        
+        .colonia-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+        }
+
+        .legend {
+            background: white;
+            padding: 12px;
+            line-height: 20px;
+            color: #333;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 0.8rem;
+        }
+        .legend i { 
+            width: 14px; 
+            height: 14px; 
+            float: left; 
+            margin-right: 8px; 
+            border-radius: 50%;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>SISTEMA INTERACTIVO DE INUNDACIONES (CD. JUÁREZ)</h1>
+        <div class="stats-bar">
+            ESTADO: <span id="alerta">SINCRONIZANDO...</span> | 
+            ACTUALIZADO: <span id="hora">--:--:--</span>
+        </div>
+    </div>
+    
+    <div id="panel-riesgo">
+        <h2>⚠️ Riesgo en Colonias</h2>
+        <div id="lista-colonias">
+            <small style="color: #999;">Cargando infraestructura...</small>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([31.7333, -106.4833], 12);
+        
+        const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        // Capas Base
+        let capaColonias = L.layerGroup().addTo(map);
+        let capaVialidades = L.layerGroup();
+        let capaCuencas = L.layerGroup();
+
+        // Capas de Infraestructura (Puntos)
+        let capaHospitales = L.layerGroup();
+        let capaComunitarios = L.layerGroup();
+        let capaEscuelas = L.layerGroup();
+
+        const capasSuperpuestas = {
+            "🏠 Colonias": capaColonias,
+            "🏥 Hospitales 2025": capaHospitales,
+            "👥 Centros Comunitarios": capaComunitarios,
+            "🎓 Escuelas": capaEscuelas,
+            "🌊 Microcuencas": capaCuencas,
+            "🛣️ Red Vial": capaVialidades
+        };
+        
+        L.control.layers({ "Mapa": baseLayer }, capasSuperpuestas, { collapsed: false }).addTo(map);
+
+        function getColor(lluvia) {
+            return lluvia > 30  ? '#c0392b' : 
+                   lluvia > 15  ? '#e67e22' : 
+                   lluvia > 5   ? '#f1c40f' : 
+                   lluvia > 0.1 ? '#2ecc71' : 
+                                  '#3498db'; 
+        }
+
+        // Función Genérica para cargar puntos (Hospitales, Escuelas, etc.)
+        async function cargarCapaPuntos(url, capa, color, titulo) {
+            if (map.hasLayer(capa) && capa.getLayers().length === 0) {
+                try {
+                    const res = await fetch(url);
+                    const geojson = await res.json();
+                    L.geoJSON(geojson, {
+                        pointToLayer: (feature, latlng) => {
+                            return L.circleMarker(latlng, {
+                                radius: 6,
+                                fillColor: color,
+                                color: "#fff",
+                                weight: 1,
+                                fillOpacity: 0.9
+                            });
+                        },
+                        onEachFeature: (f, layer) => {
+                            const nombre = f.properties.NOMBRE || f.properties.nombre || "Sin nombre";
+                            layer.bindPopup(`<b>${titulo}:</b><br>${nombre}`);
+                        }
+                    }).addTo(capa);
+                } catch (e) { console.error("Error cargando " + titulo, e); }
+            }
+        }
+
+        async function sincronizarSistema() {
+            try {
+                const res = await fetch('/estado');
+                const data = await res.json();
+                
+                document.getElementById('alerta').innerText = data.alerta;
+                document.getElementById('hora').innerText = data.ultima_actualizacion;
+
+                // 1. Sincronizar Colonias
+                if (capaColonias.getLayers().length === 0) {
+                    const resC = await fetch('/mapa-colonias');
+                    const geojsonC = await resC.json();
+                    L.geoJSON(geojsonC, {
+                        style: (f) => {
+                            const n = (f.properties.NOMBRE || f.properties.nombre || "").toUpperCase();
+                            const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === n);
+                            const v = info ? info.intensidad : 0;
+                            return { fillColor: getColor(v), weight: 1, color: 'white', fillOpacity: v > 0 ? 0.7 : 0.2 };
+                        },
+                        onEachFeature: (f, layer) => {
+                            layer.bindPopup(`<b>Colonia:</b> ${f.properties.NOMBRE || f.properties.nombre}`);
+                        }
+                    }).addTo(capaColonias);
+                } else {
+                    capaColonias.eachLayer(layer => {
+                        layer.setStyle(f => {
+                            const n = (f.properties.NOMBRE || f.properties.nombre || "").toUpperCase();
+                            const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === n);
+                            const v = info ? info.intensidad : 0;
+                            return { fillColor: getColor(v), fillOpacity: v > 0 ? 0.7 : 0.2 };
+                        });
+                    });
+                }
+
+                // 2. Cargar Capas de Infraestructura si están activas
+                cargarCapaPuntos('/mapa-hospitales', capaHospitales, '#e74c3c', 'Hospital');
+                cargarCapaPuntos('/mapa-comunitarios', capaComunitarios, '#9b59b6', 'C. Comunitario');
+                cargarCapaPuntos('/mapa-escuelas', capaEscuelas, '#2980b9', 'Escuela');
+
+                // 3. Panel Lateral
+                const lista = document.getElementById('lista-colonias');
+                if (data.colonias_criticas && data.colonias_criticas.length > 0) {
+                    lista.innerHTML = data.colonias_criticas.map(c => `
+                        <div class="colonia-item">
+                            <b>${c.nombre}</b><br>
+                            Impacto: <span style="color:var(--danger); font-weight:bold;">${c.intensidad} mm/hr</span>
+                        </div>
+                    `).join('');
+                } else {
+                    lista.innerHTML = '<small style="color: #2ecc71;">✅ Sin riesgos críticos.</small>';
+                }
+
+            } catch (err) { console.error("Error:", err); }
+        }
+
+        // Leyenda Pro
+        const legend = L.control({position: 'bottomright'});
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<strong>Intensidad (mm/hr)</strong><br>';
+            const grades = [0, 5, 15, 30];
+            const labels = ['Bajo', 'Medio', 'Alto', 'Peligro'];
+            for (let i = 0; i < grades.length; i++) {
+                div.innerHTML += `<i style="background:${getColor(grades[i] + 1)}"></i> ${labels[i]}<br>`;
+            }
+            div.innerHTML += '<hr><strong>Infraestructura</strong><br>';
+            div.innerHTML += '<i style="background:#e74c3c"></i> Hospital<br>';
+            div.innerHTML += '<i style="background:#9b59b6"></i> C. Comunitario<br>';
+            div.innerHTML += '<i style="background:#2980b9"></i> Escuela<br>';
+            return div;
+        };
+        legend.addTo(map);
+
+        sincronizarSistema();
+        setInterval(sincronizarSistema, 15000);
+    </script>
+</body>
+</html>
