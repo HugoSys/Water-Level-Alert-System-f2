@@ -109,6 +109,18 @@
         .infra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem; }
         .infra-box { background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; }
 
+        /* Estilos del control de capas */
+        .leaflet-control-layers {
+            background: var(--bg-glass) !important;
+            backdrop-filter: blur(8px);
+            border-radius: 8px !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            padding: 6px;
+        }
+
         @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.7; } 70% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.7; } }
     </style>
 </head>
@@ -149,11 +161,34 @@
         
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        const mapaBase = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OSM &copy; CARTO'
         }).addTo(map);
 
+        // --- NUEVA CAPA DE RADAR WMS ---
+        let capaRadar = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi", {
+            layers: 'nexrad-n0r-900913',
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.65,
+            attribution: "Datos de Radar © IEM Nexrad"
+        });
+
+        // Capa de Colonias
         let capaColonias = L.layerGroup().addTo(map);
+
+        // --- CONTROL DE CAPAS ---
+        const capasBase = {
+            "Mapa Claro (Carto)": mapaBase
+        };
+        const capasSuperpuestas = {
+            "⛈️ Nubes de Radar (En vivo)": capaRadar,
+            "🏘️ Colonias y Riesgo": capaColonias
+        };
+        L.control.layers(capasBase, capasSuperpuestas, { position: 'topright', collapsed: false }).addTo(map);
+        
+        // Encender el radar por defecto
+        capaRadar.addTo(map);
 
         function localizarUsuario() {
             map.locate({setView: false});
