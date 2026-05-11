@@ -8,12 +8,11 @@ import uvicorn
 from datetime import datetime
 import os
 
-# IMPORTANTE: Librería para la automatización
+# Librería para la automatización
 from fastapi_utils.tasks import repeat_every
 
 app = FastAPI(title="Monitor de Inundaciones Juárez")
 
-# Asegurar que la carpeta static exista
 if not os.path.exists("static"):
     os.makedirs("static")
 
@@ -29,8 +28,6 @@ estado_ciudad = {
     "colonias_criticas": []
 }
 
-# --- TAREA AUTOMÁTICA ---
-# Se ejecuta cada 7 minutos (420 segundos)
 @app.on_event("startup")
 @repeat_every(seconds=420) 
 def tarea_automatica_radar():
@@ -41,21 +38,14 @@ def actualizar_estado_tarea_core():
     inicio = datetime.now()
     print(f"[{inicio.strftime('%H:%M:%S')}] (AUTO) Iniciando procesamiento de radar...")
     
-    # El radar_core procesa la lluvia sobre las cuencas
     resultado = radar.procesar()
     
     if resultado["status"] == "success":
         fin = datetime.now()
         estado_ciudad["ultima_actualizacion"] = fin.strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Guardamos los datos técnicos de las cuencas
         estado_ciudad["detalle_cuencas"] = resultado["datos"]
-        
-        # EXTRAEMOS LAS COLONIAS (Se asume que radar.procesar() las incluye ahora)
-        # Si radar_core aún no las procesa, aquí se recibe una lista vacía
         estado_ciudad["colonias_criticas"] = resultado.get("colonias", [])
         
-        # Lógica de alertas basada en el valor máximo detectado
         max_detectado = max([c['max_lluvia'] for c in resultado["datos"]]) if resultado["datos"] else 0
         
         if max_detectado > 30:
@@ -83,68 +73,62 @@ async def serve_index():
 
 @app.get("/estado")
 async def consultar_estado():
-    """Devuelve el estado actual con cuencas y colonias"""
     return estado_ciudad
-
-@app.get("/mapa-cuencas")
-async def obtener_geometrias_cuencas():
-    """Endpoint técnico (opcional en el mapa)"""
-    ruta = "SHP/MICROCUENCAS.shp"
-    if not os.path.exists(ruta):
-        return {"error": "No se encontró el archivo de microcuencas"}
-    df = gpd.read_file(ruta).to_crs(epsg=4326)
-    return json.loads(df.to_json())
 
 @app.get("/mapa-colonias")
 async def get_colonias_geo():
-    """Endpoint principal para la visualización en el mapa"""
-    ruta = "SHP/Colonias/Colonias.shp"
-    if not os.path.exists(ruta):
-        return {"error": f"No se encontró el archivo en {ruta}"}
+    """Carga colonias y realiza el conteo de infraestructura internamente"""
+    ruta_colonias = "SHP/Colonias/Colonias.shp"
+    if not os.path.exists(ruta_colonias):
+        return {"error": f"No se encontró el archivo en {ruta_colonias}"}
     
-    # Conversión a EPSG:4326 para Leaflet
-    df = gpd.read_file(ruta).to_crs(epsg=4326)
-    return json.loads(df.to_json())
+    # 1. Cargar colonias
+    df_colonias = gpd.read_file(ruta_colonias).to_crs(epsg=4326)
+
+    # 2. Rutas de infraestructura para el conteo
+    capas_puntos = [
+        ("hospitales", "SHP/Hospitales_2025/Hospitales_2025.shp"),
+        ("comunitarios", "SHP/CENTROS_COMUNITARIOS_2025/CENTROS_COMUNITARIOS_2025.shp"),
+        ("escuelas", "SHP/Escuelas_17122025/Escuelas_17122025.shp")
+    ]
+
+    # 3. Realizar Unión Espacial (Spatial Join) para cada capa
+    for etiqueta, ruta in capas_puntos:
+        if os.path.exists(ruta):
+            try:
+                puntos = gpd.read_file(ruta).to_crs(epsg=4326)
+                # Unimos puntos con colonias
+                unidos = gpd.sjoin(puntos, df_colonias, how="left", predicate="within")
+                # Contamos cuántos puntos cayeron en cada índice de colonia
+                conteo = unidos.groupby("index_right").size()
+                # Asignamos el conteo al dataframe original
+                df_colonias[etiqueta] = df_colonias.index.map(conteo).fillna(0).astype(int)
+            except Exception as e:
+                print(f"Error procesando {etiqueta}: {e}")
+                df_colonias[etiqueta] = 0
+        else:
+            df_colonias[etiqueta] = 0
+
+    return json.loads(df_colonias.to_json())
+
+@app.get("/mapa-cuencas")
+async def obtener_geometrias_cuencas():
+    ruta = "SHP/MICROCUENCAS.shp"
+    if os.path.exists(ruta):
+        df = gpd.read_file(ruta).to_crs(epsg=4326)
+        return json.loads(df.to_json())
+    return {"error": "No se encontró el archivo de microcuencas"}
 
 @app.get("/mapa-vialidades")
 async def get_vialidades():
-    """Carga la traza urbana"""
     ruta = "SHP/Vialidad/Vialidades.shp"
-    if not os.path.exists(ruta):
-        # Intento con nombre en singular si falla el plural
-        ruta = "SHP/Vialidad/Vialidades.shp"
-        
     if os.path.exists(ruta):
         df = gpd.read_file(ruta).to_crs(epsg=4326)
         return json.loads(df.to_json())
     return {"error": "No se encontró el archivo de vialidades"}
-@app.get("/mapa-hospitales")
-async def get_hospitales():
-    ruta = "SHP/Hospitales_2025/Hospitales_2025.shp" # Ajusta el nombre exacto del .shp
-    if os.path.exists(ruta):
-        df = gpd.read_file(ruta).to_crs(epsg=4326)
-        return json.loads(df.to_json())
-    return {"error": "No se encontró el archivo de hospitales"}
-
-@app.get("/mapa-comunitarios")
-async def get_comunitarios():
-    ruta = "SHP/CENTROS_COMUNITARIOS_2025/CENTROS_COMUNITARIOS_2025.shp"
-    if os.path.exists(ruta):
-        df = gpd.read_file(ruta).to_crs(epsg=4326)
-        return json.loads(df.to_json())
-    return {"error": "No se encontró el archivo de centros comunitarios"}
-
-@app.get("/mapa-escuelas")
-async def get_escuelas():
-    ruta = "SHP/Escuelas_17122025/Escuelas_17122025.shp"
-    if os.path.exists(ruta):
-        df = gpd.read_file(ruta).to_crs(epsg=4326)
-        return json.loads(df.to_json())
-    return {"error": "No se encontró el archivo de escuelas"}
 
 @app.post("/procesar")
 async def ejecutar_manual(background_tasks: BackgroundTasks):
-    """Permite disparar el proceso manualmente"""
     background_tasks.add_task(actualizar_estado_tarea_core)
     return {"mensaje": "Procesamiento manual iniciado"}
 
