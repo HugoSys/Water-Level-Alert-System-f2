@@ -117,14 +117,21 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // --- AQUÍ ESTÁ LA CORRECCIÓN: Definimos los límites de Juárez ---
+        const esquinasJuarez = [[31.4500, -106.6500], [31.8500, -106.3000]];
+
         const map = L.map('map', { 
-            zoomControl: false 
+            zoomControl: false,
+            maxBounds: esquinasJuarez,      // Evita hacer pan (arrastrar) fuera de Juárez
+            maxBoundsViscosity: 1.0,        // Da un efecto de pared rígida
+            minZoom: 4                     // Evita alejar demasiado la cámara
         }).setView([31.7333, -106.4833], 12);
         
         L.control.zoom({ position: 'topright' }).addTo(map);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OSM &copy; CARTO'
+            attribution: '&copy; OSM &copy; CARTO',
+            noWrap: true // <-- Esto evita que el mapa se repita horizontalmente
         }).addTo(map);
 
         // --- CAPA DE RADAR WMS (IEM NEXRAD) ---
