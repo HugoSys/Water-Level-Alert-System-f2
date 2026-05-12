@@ -1,0 +1,117 @@
+:root {
+    --primary: #1e293b;
+    --accent: #0ea5e9;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --success: #10b981;
+    --neutral: #64748b;
+    --bg-glass: rgba(255, 255, 255, 0.9);
+}
+
+body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; overflow: hidden; }
+
+.accent-text { font-weight: 300; color: var(--accent); }
+
+/* Header */
+.header { 
+    background: var(--primary); color: white; padding: 0.8rem 1.5rem; 
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; z-index: 1100;
+    border-bottom: 3px solid var(--accent);
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand .logo-box { 
+    width: 35px; height: 35px; background: var(--accent); border-radius: 6px; 
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;
+}
+.brand h1 { margin: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.header-right { display: flex; align-items: center; gap: 20px; }
+.live-status { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 600; }
+#hora-display { color: var(--accent); font-family: monospace; font-size: 0.85rem; }
+
+.pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; animation: pulse 1.8s infinite; }
+
+.btn-menu {
+    background: var(--accent); color: white; border: none; padding: 8px 16px;
+    border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem;
+    cursor: pointer; transition: background 0.3s;
+}
+.btn-menu:hover { background: #0284c7; }
+
+/* Mapa y Paneles */
+#map { height: calc(100vh - 65px); width: 100%; background: #e5e7eb; }
+
+#panel-riesgo {
+    position: absolute; top: 85px; left: 20px; width: 280px; max-height: 65vh;
+    background: var(--bg-glass); backdrop-filter: blur(8px); z-index: 1000;
+    padding: 18px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border-top: 4px solid var(--accent); overflow-y: auto;
+}
+
+#panel-riesgo h2 { font-size: 0.8rem; margin: 0 0 12px 0; color: var(--primary); text-transform: uppercase; font-weight: 700; }
+.status-ok { color: var(--success); font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+.status-desc { font-size: 0.75rem; color: var(--neutral); line-height: 1.4; }
+
+.colonia-card {
+    background: white; padding: 10px; border-radius: 8px; margin-bottom: 8px;
+    border-left: 4px solid var(--danger); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.colonia-card b { display: block; font-size: 0.9rem; color: var(--primary); }
+
+/* Botón Radar Centrado */
+.radar-control {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000;
+    background: white; padding: 12px 24px; border-radius: 30px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2); cursor: pointer;
+    display: flex; align-items: center; gap: 10px; font-size: 0.85rem;
+    font-weight: 700; color: var(--primary); transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.radar-control.active { 
+    background: var(--accent); color: white; border-color: var(--accent); 
+    transform: translateX(-50%) scale(1.05); 
+}
+
+/* Sidebar e Interfaz Analítica */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); z-index: 1200; opacity: 0; visibility: hidden; transition: 0.3s;
+}
+.overlay.active { opacity: 1; visibility: visible; }
+
+.sidebar {
+    position: fixed; top: 0; right: -400px; width: 380px; height: 100vh;
+    background: var(--bg-glass); backdrop-filter: blur(15px);
+    z-index: 1300; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+    transition: right 0.3s ease; padding: 25px; box-sizing: border-box;
+    display: flex; flex-direction: column; overflow-y: auto;
+}
+.sidebar.active { right: 0; }
+
+.sidebar-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid var(--accent); padding-bottom: 15px; margin-bottom: 20px;
+}
+.sidebar-label { font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 10px; }
+
+.weather-card {
+    background: linear-gradient(135deg, var(--primary), #334155);
+    color: white; border-radius: 10px; padding: 18px; display: flex; align-items: center; gap: 15px;
+    margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+.weather-lottie { width: 65px; height: 65px; }
+.weather-temp { font-size: 1.8rem; font-weight: 700; }
+
+.kpi-placeholder {
+    background: rgba(255,255,255,0.8); border: 1px dashed var(--neutral);
+    border-radius: 8px; padding: 20px; text-align: center; color: var(--neutral); font-size: 0.85rem;
+}
+
+/* Leaflet Popups */
+.popup-header { font-weight: 700; color: var(--primary); margin-bottom: 6px; border-bottom: 1px solid #eee; }
+.infra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem; }
+.infra-box { background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; }
+
+@keyframes pulse { 0% { transform: scale(0.95); opacity: 0.7; } 70% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.7; } }
