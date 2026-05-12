@@ -12,20 +12,25 @@
 </head>
 <body>
 
-    <header class="header">
-        <div class="brand">
-            <div class="logo-box">JZ</div>
-            <h1>Monitor Pluvial <span class="accent-text">Juárez</span></h1>
+<header class="header">
+    <div class="brand">
+        <button class="btn-burger" onclick="toggleSidebar()" aria-label="Abrir menú">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+        </button>
+
+        <div class="logo-box">JZ</div>
+        <h1>Monitor Pluvial <span class="accent-text">Juárez</span></h1>
+    </div>
+    
+    <div class="header-right">
+        <div class="live-status">
+            <div class="pulse-dot"></div>
+            SISTEMA ACTIVO | <span id="hora-display">--:--:--</span>
         </div>
-        
-        <div class="header-right">
-            <div class="live-status">
-                <div class="pulse-dot"></div>
-                SISTEMA ACTIVO | <span id="hora-display">--:--:--</span>
-            </div>
-            <button class="btn-menu" onclick="toggleSidebar()">KPIs e Historial</button>
-        </div>
-    </header>
+    </div>
+</header>
 
     <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     
