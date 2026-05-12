@@ -39,25 +39,52 @@
             <h2>Panel Analítico</h2>
             <button class="btn-close" onclick="toggleSidebar()">&times;</button>
         </div>
-        
+
         <div class="sidebar-label">Clima Actual - Cd. Juárez</div>
         <div class="weather-card" id="weather-card">
             <div class="weather-lottie" id="weather-lottie"></div>
             <div class="weather-info">
                 <div class="weather-temp" id="weather-temp">--°C</div>
-                <div class="weather-desc" id="weather-desc">Cargando datos...</div>
+                <div class="weather-desc" id="weather-desc">Cargando...</div>
                 <div class="weather-details" id="weather-details">Viento: -- km/h</div>
             </div>
         </div>
-        
-        <div class="sidebar-label">Métricas del Mes</div>
-        <div class="kpi-placeholder">
-            <p>Gráfico de barras histórico</p>
+
+        <div class="sidebar-label">Condiciones Atmosféricas</div>
+        <div class="stats-container-box">
+            <div class="stat-item">
+                <span class="stat-icon">💧</span>
+                <div class="stat-data">
+                    <span class="stat-label">Humedad</span>
+                    <span id="stat-humidity" class="stat-value">--%</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">⏲️</span>
+                <div class="stat-data">
+                    <span class="stat-label">Presión</span>
+                    <span id="stat-pressure" class="stat-value">-- hPa</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">☁️</span>
+                <div class="stat-data">
+                    <span class="stat-label">Nubosidad</span>
+                    <span id="stat-clouds" class="stat-value">--%</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">☔</span>
+                <div class="stat-data">
+                    <span class="stat-label">Prob. Lluvia</span>
+                    <span id="stat-pop" class="stat-value">--%</span>
+                </div>
+            </div>
         </div>
         
-        <div class="sidebar-label" style="margin-top: 20px;">Top Zonas Vulnerables</div>
+        <div class="sidebar-label">Métricas de Riesgo</div>
         <div class="kpi-placeholder">
-            <p>Zonas más reportadas</p>
+            <p>Análisis de saturación de suelo</p>
         </div>
     </aside>
 
@@ -66,7 +93,6 @@
         <div id="lista-colonias">
             <div class="status-container">
                 <div class="status-ok">● CIUDAD SIN NOVEDAD</div>
-                <div class="status-desc">Monitoreo activo sin riesgos detectados.</div>
             </div>
         </div>
     </section>
