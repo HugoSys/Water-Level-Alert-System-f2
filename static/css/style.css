@@ -12,7 +12,7 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
 
 .accent-text { font-weight: 300; color: var(--accent); }
 
-/* Header */
+/* --- HEADER --- */
 .header { 
     background: var(--primary); color: white; padding: 0.8rem 1.5rem; 
     display: flex; justify-content: space-between; align-items: center;
@@ -20,7 +20,27 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
     border-bottom: 3px solid var(--accent);
 }
 
-.brand { display: flex; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 15px; }
+
+/* Botón Hamburguesa */
+.btn-burger {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    transition: transform 0.2s;
+}
+.btn-burger:hover { transform: scale(1.1); }
+.btn-burger .line {
+    width: 22px;
+    height: 2px;
+    background-color: white;
+    border-radius: 2px;
+}
+
 .brand .logo-box { 
     width: 35px; height: 35px; background: var(--accent); border-radius: 6px; 
     display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;
@@ -33,14 +53,7 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
 
 .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; animation: pulse 1.8s infinite; }
 
-.btn-menu {
-    background: var(--accent); color: white; border: none; padding: 8px 16px;
-    border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem;
-    cursor: pointer; transition: background 0.3s;
-}
-.btn-menu:hover { background: #0284c7; }
-
-/* Mapa y Paneles */
+/* --- MAPA Y PANELES --- */
 #map { height: calc(100vh - 65px); width: 100%; background: #e5e7eb; }
 
 #panel-riesgo {
@@ -60,7 +73,7 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
 }
 .colonia-card b { display: block; font-size: 0.9rem; color: var(--primary); }
 
-/* Botón Radar Centrado */
+/* Radar */
 .radar-control {
     position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000;
     background: white; padding: 12px 24px; border-radius: 30px;
@@ -69,12 +82,9 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
     font-weight: 700; color: var(--primary); transition: all 0.3s ease;
     border: 1px solid rgba(0,0,0,0.05);
 }
-.radar-control.active { 
-    background: var(--accent); color: white; border-color: var(--accent); 
-    transform: translateX(-50%) scale(1.05); 
-}
+.radar-control.active { background: var(--accent); color: white; border-color: var(--accent); transform: translateX(-50%) scale(1.05); }
 
-/* Sidebar e Interfaz Analítica */
+/* --- SIDEBAR IZQUIERDO --- */
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.4); z-index: 1200; opacity: 0; visibility: hidden; transition: 0.3s;
@@ -82,13 +92,14 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
 .overlay.active { opacity: 1; visibility: visible; }
 
 .sidebar {
-    position: fixed; top: 0; right: -400px; width: 380px; height: 100vh;
+    position: fixed; top: 0; left: -400px; /* Cambiado a la izquierda */
+    width: 380px; height: 100vh;
     background: var(--bg-glass); backdrop-filter: blur(15px);
-    z-index: 1300; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
-    transition: right 0.3s ease; padding: 25px; box-sizing: border-box;
+    z-index: 1300; box-shadow: 5px 0 25px rgba(0,0,0,0.2);
+    transition: left 0.3s ease; padding: 25px; box-sizing: border-box;
     display: flex; flex-direction: column; overflow-y: auto;
 }
-.sidebar.active { right: 0; }
+.sidebar.active { left: 0; }
 
 .sidebar-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -109,7 +120,7 @@ body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f1f5f9; o
     border-radius: 8px; padding: 20px; text-align: center; color: var(--neutral); font-size: 0.85rem;
 }
 
-/* Leaflet Popups */
+/* Popups */
 .popup-header { font-weight: 700; color: var(--primary); margin-bottom: 6px; border-bottom: 1px solid #eee; }
 .infra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem; }
 .infra-box { background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; }
