@@ -35,8 +35,17 @@
 
         .brand h1 { margin: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px; }
 
+        .header-right { display: flex; align-items: center; gap: 20px; }
+
         .live-status { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 600; }
         .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; animation: pulse 1.8s infinite; }
+
+        .btn-menu {
+            background: var(--accent); color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.8rem;
+            cursor: pointer; transition: background 0.3s; display: flex; align-items: center; gap: 6px;
+        }
+        .btn-menu:hover { background: #0284c7; }
 
         #map { height: calc(100vh - 65px); width: 100%; background: #e5e7eb; }
 
@@ -58,17 +67,33 @@
         }
         .colonia-card b { display: block; font-size: 0.9rem; color: var(--primary); }
 
-        /* Botón de Radar Personalizado */
-        .radar-control {
-            position: absolute; top: 85px; right: 20px; z-index: 1000;
-            background: white; padding: 10px 18px; border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;
-            display: flex; align-items: center; gap: 10px; font-size: 0.8rem;
-            font-weight: 700; color: var(--primary); transition: all 0.3s;
+        /* Botón de Radar */
+      .radar-control {
+            position: absolute; 
+            bottom: 30px; /* Lo bajamos a la parte inferior */
+            left: 50%; /* Lo centramos horizontalmente */
+            transform: translateX(-50%); /* Ajuste exacto al centro */
+            z-index: 1000;
+            background: white; 
+            padding: 12px 24px; 
+            border-radius: 30px; /* Estilo píldora más moderno */
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2); 
+            cursor: pointer;
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-size: 0.85rem;
+            font-weight: 700; 
+            color: var(--primary); 
+            transition: all 0.3s ease;
             border: 1px solid rgba(0,0,0,0.05);
         }
-        .radar-control.active { background: var(--accent); color: white; border-color: var(--accent); }
-
+       .radar-control.active { 
+            background: var(--accent); 
+            color: white; 
+            border-color: var(--accent); 
+            transform: translateX(-50%) scale(1.05); /* Pequeño efecto al activarse */
+        }
         /* Leyenda */
         .legend {
             background: var(--bg-glass); backdrop-filter: blur(8px); padding: 12px 15px;
@@ -78,7 +103,57 @@
         .legend b { color: var(--primary); display: block; margin-bottom: 5px; border-bottom: 1px solid #ddd; }
         .legend i { width: 10px; height: 10px; float: left; margin-right: 10px; border-radius: 2px; margin-top: 4px; }
 
-        /* Popups */
+        /* SIDEBAR Y OVERLAY */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 1200;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .overlay.active { opacity: 1; visibility: visible; }
+
+        .sidebar {
+            position: fixed; top: 0; right: -400px; width: 380px; height: 100vh;
+            background: var(--bg-glass); backdrop-filter: blur(15px);
+            z-index: 1300; box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+            transition: right 0.3s ease; padding: 25px; box-sizing: border-box;
+            display: flex; flex-direction: column; overflow-y: auto;
+            border-left: 1px solid rgba(255,255,255,0.5);
+        }
+        .sidebar.active { right: 0; }
+
+        .sidebar-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--accent); padding-bottom: 15px; margin-bottom: 20px;
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; font-weight: 700; }
+        .btn-close { 
+            background: none; border: none; font-size: 1.5rem; color: var(--neutral); 
+            cursor: pointer; transition: color 0.2s; padding: 0; line-height: 1;
+        }
+        .btn-close:hover { color: var(--danger); }
+
+        /* Tarjeta de Clima */
+        .weather-card {
+            background: linear-gradient(135deg, var(--primary), #334155);
+            color: white; border-radius: 10px; padding: 18px;
+            display: flex; align-items: center; gap: 15px;
+            margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        
+        /* Contenedor específico para la animación de Lottie */
+        .weather-lottie { width: 65px; height: 65px; display: flex; align-items: center; justify-content: center; }
+        
+        .weather-info { display: flex; flex-direction: column; }
+        .weather-temp { font-size: 1.8rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+        .weather-desc { font-size: 0.85rem; font-weight: 600; color: #cbd5e1; text-transform: capitalize; }
+        .weather-details { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+
+        .kpi-placeholder {
+            background: rgba(255,255,255,0.8); border: 1px dashed var(--neutral);
+            border-radius: 8px; padding: 20px; text-align: center; color: var(--neutral);
+            font-size: 0.85rem; margin-bottom: 15px;
+        }
+
         .popup-header { font-weight: 700; color: var(--primary); margin-bottom: 6px; border-bottom: 1px solid #eee; }
         .infra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem; }
         .infra-box { background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; }
@@ -93,14 +168,44 @@
             <div class="logo-box">JZ</div>
             <h1>Monitor Pluvial <span style="font-weight: 300; color: var(--accent);">Juárez</span></h1>
         </div>
-        <div class="live-status">
-            <div class="pulse-dot"></div>
-            SISTEMA ACTIVO | <span id="hora-display" style="color: var(--accent); font-family: monospace; font-size: 0.85rem;">--:--:--</span>
+        
+        <div class="header-right">
+            <div class="live-status">
+                <div class="pulse-dot"></div>
+                SISTEMA ACTIVO | <span id="hora-display" style="color: var(--accent); font-family: monospace; font-size: 0.85rem;">--:--:--</span>
+            </div>
+            <button class="btn-menu" onclick="toggleSidebar()">
+                 KPIs e Historial
+            </button>
         </div>
     </header>
 
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Panel Analítico</h2>
+            <button class="btn-close" onclick="toggleSidebar()">&times;</button>
+        </div>
+        
+        <div style="font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 10px;">Clima Actual - Cd. Juárez</div>
+        <div class="weather-card" id="weather-card">
+            <div class="weather-lottie" id="weather-lottie"></div>
+            <div class="weather-info">
+                <div class="weather-temp" id="weather-temp">--°C</div>
+                <div class="weather-desc" id="weather-desc">Cargando datos...</div>
+                <div class="weather-details" id="weather-details">Viento: -- km/h</div>
+            </div>
+        </div>
+        
+        <div style="font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 10px;">Métricas del Mes</div>
+        <div class="kpi-placeholder">Aquí irá un gráfico de barras con el histórico de lluvias</div>
+        
+        <div style="font-size: 0.9rem; color: var(--primary); font-weight: 600; margin-bottom: 10px; margin-top: 20px;">Top Zonas Vulnerables</div>
+        <div class="kpi-placeholder">Lista generada dinámicamente de las colonias más reportadas</div>
+    </div>
+
     <div id="btn-radar" class="radar-control" onclick="toggleRadar()">
-        📡 <span>VISUALIZAR RADAR</span>
+         <span>VISUALIZAR RADAR</span>
     </div>
     
     <div id="panel-riesgo">
@@ -115,26 +220,26 @@
 
     <div id="map"></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <script>
-        // --- AQUÍ ESTÁ LA CORRECCIÓN: Definimos los límites de Juárez ---
         const esquinasJuarez = [[31.4500, -106.6500], [31.8500, -106.3000]];
 
         const map = L.map('map', { 
             zoomControl: false,
-            maxBounds: esquinasJuarez,      // Evita hacer pan (arrastrar) fuera de Juárez
-            maxBoundsViscosity: 1.0,        // Da un efecto de pared rígida
-            minZoom: 4                     // Evita alejar demasiado la cámara
+            maxBounds: esquinasJuarez,      
+            maxBoundsViscosity: 1.0,        
+            minZoom: 4                     
         }).setView([31.7333, -106.4833], 12);
         
         L.control.zoom({ position: 'topright' }).addTo(map);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OSM &copy; CARTO',
-            noWrap: true // <-- Esto evita que el mapa se repita horizontalmente
+            noWrap: true 
         }).addTo(map);
 
-        // --- CAPA DE RADAR WMS (IEM NEXRAD) ---
         let radarActive = false;
         let capaRadar = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi", {
             layers: 'nexrad-n0r-900913',
@@ -144,8 +249,12 @@
             attribution: "Datos de Radar © IEM Nexrad"
         });
 
-        // Capa de Colonias
         let capaColonias = L.layerGroup().addTo(map);
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('active');
+        }
 
         function toggleRadar() {
             radarActive = !radarActive;
@@ -170,6 +279,63 @@
 
         function getColor(lluvia) {
             return lluvia > 30 ? '#ef4444' : lluvia > 15 ? '#f59e0b' : lluvia > 5 ? '#eab308' : lluvia > 0.1 ? '#10b981' : '#38bdf8';
+        }
+
+        // Variable global para manejar la animación
+        let animacionClima = null;
+
+        async function obtenerClimaJuarez() {
+            try {
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=31.7333&longitude=-106.4833&current_weather=true&timezone=America/Denver');
+                const data = await res.json();
+                const clima = data.current_weather;
+                
+                document.getElementById('weather-temp').innerText = `${clima.temperature}°C`;
+                document.getElementById('weather-details').innerText = `Viento: ${clima.windspeed} km/h`;
+                
+                let lottieUrl = "";
+                let desc = "Despejado / Parcial";
+                
+                // Asignar URLs de animaciones JSON según el clima de Open-Meteo
+                if (clima.weathercode === 0) { 
+                    lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_Stdaec.json"; // Soleado
+                    desc = "Despejado"; 
+                }
+                else if (clima.weathercode >= 1 && clima.weathercode <= 3) { 
+                    lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_dgjK9i.json"; // Nubes y Sol
+                    desc = "Nubosidad Parcial"; 
+                }
+                else if (clima.weathercode >= 51 && clima.weathercode <= 67 || clima.weathercode >= 80 && clima.weathercode <= 82) { 
+                    lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_rpC1Rd.json"; // Lluvia
+                    desc = "Precipitación Activa"; 
+                }
+                else if (clima.weathercode >= 95) { 
+                    lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_Kuot2e.json"; // Tormenta
+                    desc = "Tormenta Eléctrica"; 
+                } else {
+                    lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_dgjK9i.json"; // Por defecto
+                }
+                
+                document.getElementById('weather-desc').innerText = desc;
+                
+                // Si ya existe una animación previa, la destruimos para evitar duplicados
+                if (animacionClima) {
+                    animacionClima.destroy();
+                }
+
+                // Cargar y ejecutar la animación en el contenedor HTML
+                animacionClima = lottie.loadAnimation({
+                    container: document.getElementById('weather-lottie'),
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: lottieUrl
+                });
+                
+            } catch (error) {
+                console.error("Error obteniendo el clima:", error);
+                document.getElementById('weather-desc').innerText = "Error de conexión";
+            }
         }
 
         async function sincronizarSistema() {
@@ -248,9 +414,12 @@
         };
         legend.addTo(map);
 
+        obtenerClimaJuarez(); 
+        setInterval(obtenerClimaJuarez, 1800000); 
+
         localizarUsuario();
         sincronizarSistema();
-        setInterval(sincronizarSistema, 15000);
+        setInterval(sincronizarSistema, 15000); 
     </script>
 </body>
 </html>
