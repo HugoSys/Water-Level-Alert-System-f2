@@ -17,7 +17,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     noWrap: true 
 }).addTo(map);
 
-// --- CAPAS ---
+// --- CAPAS Y ESTADOS ---
 let radarActive = false;
 const capaRadar = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi", {
     layers: 'nexrad-n0r-900913',
@@ -47,13 +47,13 @@ function toggleRadar() {
     }
 }
 
-// --- AUXILIARES ---
+// Colores unificados con el sistema de riesgo
 function obtenerColorRiesgo(v) {
-    if (v > 30) return '#ef4444'; // Muy Alto
-    if (v > 15) return '#f59e0b'; // Alto
-    if (v > 5)  return '#eab308'; // Medio
-    if (v > 0.1) return '#10b981'; // Bajo
-    return '#f1f5f9'; // Relleno base (seco)
+    if (v > 30) return '#ef4444'; // Rojo (Crítico)
+    if (v > 15) return '#f59e0b'; // Naranja (Alto)
+    if (v > 5)  return '#eab308'; // Amarillo (Medio)
+    if (v > 0.1) return '#38bdf8'; // Celeste (Bajo)
+    return 'rgba(255, 255, 255, 0.1)'; // Transparente/Gris en Sidebar Oscuro
 }
 
 // --- CLIMA Y LOTTIE ---
@@ -66,23 +66,20 @@ async function obtenerClimaJuarez() {
         const data = await res.json();
         const clima = data.current_weather;
         
-        // Actualizar Weather Card
+        // Actualizar UI Clima
         document.getElementById('weather-temp').innerText = `${clima.temperature}°C`;
         document.getElementById('weather-details').innerText = `Viento: ${clima.windspeed} km/h`;
-        
-        // Actualizar Caja de Estadísticas Atmosféricas
         document.getElementById('stat-humidity').innerText = `${data.hourly.relative_humidity_2m[0]}%`;
         document.getElementById('stat-pressure').innerText = `${data.hourly.surface_pressure[0]} hPa`;
         document.getElementById('stat-clouds').innerText = `${data.hourly.cloud_cover[0]}%`;
         document.getElementById('stat-pop').innerText = `${data.hourly.precipitation_probability[0]}%`;
 
-        // Lógica de Animación Lottie y Descripción
-        let lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_dgjK9i.json";
+        // Lógica de Iconos Animados
+        let lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_dgjK9i.json"; 
         let desc = "Nubosidad Parcial";
         
         if (clima.weathercode === 0) { lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_Stdaec.json"; desc = "Despejado"; }
-        else if (clima.weathercode >= 51 && clima.weathercode <= 82) { lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_rpC1Rd.json"; desc = "Precipitación Activa"; }
-        else if (clima.weathercode >= 95) { lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_Kuot2e.json"; desc = "Tormenta Eléctrica"; }
+        else if (clima.weathercode >= 51) { lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_rpC1Rd.json"; desc = "Precipitación Activa"; }
 
         document.getElementById('weather-desc').innerText = desc;
         
@@ -95,82 +92,37 @@ async function obtenerClimaJuarez() {
     } catch (error) { console.error("Error clima:", error); }
 }
 
-// --- PREDICCIÓN OPEN-METEO (CHART.JS) ---
-let chartPrediccion = null;
-
+// --- SLIDER DE INTENSIDAD ---
 async function cargarPrediccionLluvia() {
     try {
         const res = await fetch('/prediccion-lluvia');
         const result = await res.json();
-        
         if (result.status === 'success') {
-            renderizarGrafica(result.data);
+            dibujarTimeline(result.data);
         }
-    } catch (error) {
-        console.error("Error al obtener la predicción de lluvia:", error);
-    }
+    } catch (e) { console.error("Error en timeline:", e); }
 }
 
-function renderizarGrafica(datos) {
-    const ctx = document.getElementById('graficaPrediccion');
-    if (!ctx) return;
+function dibujarTimeline(datos) {
+    const track = document.getElementById('timeline-track');
+    if (!track) return;
+    track.innerHTML = ''; 
 
-    // Formatear datos para Chart.js
-    const etiquetasHora = datos.map(d => {
-        const fecha = new Date(d.hora);
-        return fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    });
-    const datosMm = datos.map(d => d.mm);
-    const datosProb = datos.map(d => d.probabilidad);
+    datos.forEach(hora => {
+        const segment = document.createElement('div');
+        segment.className = 'timeline-segment';
+        
+        const mm = hora.mm || 0;
+        const color = obtenerColorRiesgo(mm);
 
-    // Destruir gráfica previa para evitar superposición visual
-    if (chartPrediccion) {
-        chartPrediccion.destroy();
-    }
-
-    chartPrediccion = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: etiquetasHora,
-            datasets: [
-                {
-                    label: 'Lluvia (mm)',
-                    data: datosMm,
-                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1,
-                    yAxisID: 'y' 
-                },
-                {
-                    label: 'Probabilidad (%)',
-                    data: datosProb,
-                    type: 'line',
-                    borderColor: 'rgba(239, 68, 68, 1)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    yAxisID: 'y1' 
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                y: {
-                    type: 'linear', display: true, position: 'left',
-                    title: { display: true, text: 'Milímetros (mm)' }
-                },
-                y1: {
-                    type: 'linear', display: true, position: 'right', min: 0, max: 100,
-                    title: { display: true, text: 'Probabilidad (%)' },
-                    grid: { drawOnChartArea: false } 
-                }
-            },
-            plugins: {
-                legend: { position: 'top', labels: { boxWidth: 12 } }
-            }
-        }
+        segment.style.backgroundColor = color;
+        segment.style.borderRight = '1px solid rgba(0,0,0,0.2)'; // División sutil
+        
+        const fecha = new Date(hora.hora);
+        const horaTxt = fecha.getHours().toString().padStart(2, '0') + ":00";
+        segment.setAttribute('data-info', `${horaTxt} | ${mm}mm | Prob: ${hora.probabilidad}%`);
+        
+        track.appendChild(segment);
     });
 }
 
@@ -185,7 +137,7 @@ async function sincronizarSistema() {
             document.getElementById('hora-display').innerText = data.ultima_actualizacion.split(' ')[1];
         }
 
-        // Lógica de Colonias en el Mapa
+        // Renderizar Colonias en el Mapa
         if (capaColonias.getLayers().length === 0) {
             const resC = await fetch('/mapa-colonias');
             const geojsonC = await resC.json();
@@ -194,15 +146,21 @@ async function sincronizarSistema() {
                     const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === (f.properties.NOMBRE || "").toUpperCase());
                     const v = info ? info.intensidad : 0;
                     return { 
-                        fillColor: obtenerColorRiesgo(v), 
-                        weight: 2.5, 
-                        color: 'white', 
-                        fillOpacity: v > 0 ? 0.75 : 0.4 
+                        fillColor: obtenerColorRiesgo(v), weight: 1.5, color: 'white', fillOpacity: v > 0 ? 0.7 : 0.3 
                     };
                 },
                 onEachFeature: (f, layer) => {
                     const p = f.properties;
-                    layer.bindPopup(`<div class="popup-header">${p.NOMBRE}</div><div class="infra-grid"><div class="infra-box">🏥 Hosp: ${p.hospitales || 0}</div><div class="infra-box">🎓 Esc: ${p.escuelas || 0}</div></div>`);
+                    layer.bindPopup(`
+                        <div style="font-family: 'Inter', sans-serif; min-width: 150px;">
+                            <div style="font-weight: 800; border-bottom: 2px solid #38bdf8; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase;">${p.NOMBRE}</div>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 0.75rem;">
+                                <span>🏥 Hospitales: <b>${p.hospitales || 0}</b></span>
+                                <span>🎓 Escuelas: <b>${p.escuelas || 0}</b></span>
+                                <span>🏠 C. Comunitarios: <b>${p.comunitarios || 0}</b></span>
+                            </div>
+                        </div>
+                    `);
                 }
             }).addTo(capaColonias);
         } else {
@@ -211,27 +169,29 @@ async function sincronizarSistema() {
                     const n = (layer.feature.properties.NOMBRE || "").toUpperCase();
                     const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === n);
                     const v = info ? info.intensidad : 0;
-                    layer.setStyle({
-                        fillColor: obtenerColorRiesgo(v),
-                        fillOpacity: v > 0 ? 0.75 : 0.4
-                    });
+                    layer.setStyle({ fillColor: obtenerColorRiesgo(v), fillOpacity: v > 0 ? 0.7 : 0.3 });
                 }
             });
         }
 
-        // Lista de Riesgo en el Panel Lateral
+        // Lista Lateral de Riesgo
         const lista = document.getElementById('lista-colonias');
         lista.innerHTML = data.colonias_criticas.length > 0 ? 
-            data.colonias_criticas.map(c => `<div class="colonia-card"><b>${c.nombre}</b><span>RIESGO: ${c.intensidad} mm/hr</span></div>`).join('') :
-            `<div class="status-container"><div class="status-ok">● CIUDAD SIN NOVEDAD</div></div>`;
+            data.colonias_criticas.map(c => `
+                <div class="colonia-card">
+                    <b>${c.nombre}</b>
+                    <span style="color:${obtenerColorRiesgo(c.intensidad)}">${c.intensidad} mm/hr</span>
+                </div>`).join('') :
+            `<div class="status-ok">● CIUDAD BAJO MONITOREO</div>`;
             
     } catch (err) { console.error("Error sync:", err); }
 }
 
 // --- INICIALIZACIÓN ---
 obtenerClimaJuarez();
-cargarPrediccionLluvia(); // Se lanza al inicio
-setInterval(obtenerClimaJuarez, 1800000); // Cada 30 min
-setInterval(cargarPrediccionLluvia, 1800000); // Cada 30 min
+cargarPrediccionLluvia();
 sincronizarSistema();
-setInterval(sincronizarSistema, 15000); // Cada 15 seg
+
+setInterval(obtenerClimaJuarez, 1800000);   
+setInterval(cargarPrediccionLluvia, 1800000); 
+setInterval(sincronizarSistema, 15000);
