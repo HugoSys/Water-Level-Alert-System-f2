@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import geopandas as gpd
@@ -7,6 +7,7 @@ from .radar_core import RadarProcessor
 import uvicorn
 from datetime import datetime
 import os
+import httpx # <-- Librería para la API de Open-Meteo
 
 # Librería para la automatización
 from fastapi_utils.tasks import repeat_every
@@ -74,6 +75,41 @@ async def serve_index():
 @app.get("/estado")
 async def consultar_estado():
     return estado_ciudad
+
+# --- NUEVO ENDPOINT DE PREDICCIÓN OPEN-METEO ---
+@app.get("/prediccion-lluvia")
+async def obtener_prediccion_lluvia(lat: float = 31.7333, lon: float = -106.4833):
+    """
+    Obtiene la predicción de lluvia por hora usando Open-Meteo.
+    Por defecto, usa las coordenadas de Ciudad Juárez.
+    """
+    url = (
+        f"https://api.open-meteo.com/v1/forecast?"
+        f"latitude={lat}&longitude={lon}&"
+        f"hourly=precipitation,precipitation_probability&"
+        f"timezone=America/Denver"
+    )
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            data = response.json()
+            
+            tiempos = data["hourly"]["time"]
+            precipitacion = data["hourly"]["precipitation"]
+            probabilidad = data["hourly"]["precipitation_probability"]
+            
+            # Formateamos los datos para las próximas 24 horas
+            pronostico = [
+                {"hora": t, "mm": p, "probabilidad": prob}
+                for t, p, prob in zip(tiempos, precipitacion, probabilidad)
+            ][:24]
+            
+            return {"status": "success", "data": pronostico}
+            
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"Error conectando con Open-Meteo: {str(e)}")
 
 @app.get("/mapa-colonias")
 async def get_colonias_geo():
