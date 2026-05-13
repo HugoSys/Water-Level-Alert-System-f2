@@ -95,6 +95,85 @@ async function obtenerClimaJuarez() {
     } catch (error) { console.error("Error clima:", error); }
 }
 
+// --- PREDICCIÓN OPEN-METEO (CHART.JS) ---
+let chartPrediccion = null;
+
+async function cargarPrediccionLluvia() {
+    try {
+        const res = await fetch('/prediccion-lluvia');
+        const result = await res.json();
+        
+        if (result.status === 'success') {
+            renderizarGrafica(result.data);
+        }
+    } catch (error) {
+        console.error("Error al obtener la predicción de lluvia:", error);
+    }
+}
+
+function renderizarGrafica(datos) {
+    const ctx = document.getElementById('graficaPrediccion');
+    if (!ctx) return;
+
+    // Formatear datos para Chart.js
+    const etiquetasHora = datos.map(d => {
+        const fecha = new Date(d.hora);
+        return fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    });
+    const datosMm = datos.map(d => d.mm);
+    const datosProb = datos.map(d => d.probabilidad);
+
+    // Destruir gráfica previa para evitar superposición visual
+    if (chartPrediccion) {
+        chartPrediccion.destroy();
+    }
+
+    chartPrediccion = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: etiquetasHora,
+            datasets: [
+                {
+                    label: 'Lluvia (mm)',
+                    data: datosMm,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y' 
+                },
+                {
+                    label: 'Probabilidad (%)',
+                    data: datosProb,
+                    type: 'line',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    yAxisID: 'y1' 
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                y: {
+                    type: 'linear', display: true, position: 'left',
+                    title: { display: true, text: 'Milímetros (mm)' }
+                },
+                y1: {
+                    type: 'linear', display: true, position: 'right', min: 0, max: 100,
+                    title: { display: true, text: 'Probabilidad (%)' },
+                    grid: { drawOnChartArea: false } 
+                }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 12 } }
+            }
+        }
+    });
+}
+
 // --- SINCRONIZACIÓN CON BACKEND ---
 async function sincronizarSistema() {
     try {
@@ -116,7 +195,7 @@ async function sincronizarSistema() {
                     const v = info ? info.intensidad : 0;
                     return { 
                         fillColor: obtenerColorRiesgo(v), 
-                        weight: 2.5, // Contorno grueso solicitado
+                        weight: 2.5, 
                         color: 'white', 
                         fillOpacity: v > 0 ? 0.75 : 0.4 
                     };
@@ -127,7 +206,6 @@ async function sincronizarSistema() {
                 }
             }).addTo(capaColonias);
         } else {
-            // Actualización dinámica de estilos si ya existen las capas
             capaColonias.eachLayer(layer => {
                 if (layer.setStyle && layer.feature) {
                     const n = (layer.feature.properties.NOMBRE || "").toUpperCase();
@@ -152,6 +230,8 @@ async function sincronizarSistema() {
 
 // --- INICIALIZACIÓN ---
 obtenerClimaJuarez();
+cargarPrediccionLluvia(); // Se lanza al inicio
 setInterval(obtenerClimaJuarez, 1800000); // Cada 30 min
+setInterval(cargarPrediccionLluvia, 1800000); // Cada 30 min
 sincronizarSistema();
 setInterval(sincronizarSistema, 15000); // Cada 15 seg
