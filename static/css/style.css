@@ -1,116 +1,155 @@
 :root {
-    --primary: #1e293b;
-    --accent: #38bdf8;
-    --danger: #ef4444;
-    --success: #10b981;
-    --neutral: #64748b;
-    --bg: #f8fafc;
-    --border: #e2e8f0;
+    --primary: #1e293b;   /* Azul oscuro del Header */
+    --accent: #38bdf8;    /* Celeste brillante para resaltar */
+    --danger: #ef4444;    /* Rojo crítico */
+    --warning: #f59e0b;   /* Naranja/Amarillo */
+    --success: #10b981;   /* Verde sistema activo */
+    --text-main: #f8fafc; /* Blanco azulado para texto */
+    --text-dim: #94a3b8;  /* Gris para etiquetas secundarias */
+    --border-dark: rgba(255, 255, 255, 0.1);
 }
 
+/* --- BASE --- */
+* { box-sizing: border-box; }
 body {
     margin: 0; font-family: 'Inter', sans-serif;
-    background-color: var(--bg); overflow: hidden;
+    background-color: #0f172a; overflow: hidden;
 }
 
-/* --- HEADER COMPACTO --- */
+/* --- HEADER --- */
 .header {
-    height: 50px; /* Reducido de 60px */
-    background: var(--primary); color: white;
+    height: 50px; background: var(--primary); color: var(--text-main);
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 15px; position: relative; z-index: 1001;
+    border-bottom: 1px solid var(--border-dark);
 }
-
 .brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { font-size: 0.95rem; margin: 0; text-transform: uppercase; font-weight: 700; }
 .logo-box { 
     background: var(--accent); color: var(--primary); 
-    padding: 3px 6px; border-radius: 4px; font-weight: 800; font-size: 0.8rem;
+    padding: 3px 6px; border-radius: 4px; font-weight: 800; font-size: 0.8rem; 
 }
 
-.brand h1 { font-size: 0.95rem; margin: 0; text-transform: uppercase; }
-
-.btn-burger {
-    background: none; border: none; cursor: pointer;
-    display: flex; flex-direction: column; gap: 4px; padding: 5px;
+.live-status { font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.pulse-dot { 
+    width: 8px; height: 8px; background: var(--success); border-radius: 50%; 
+    animation: pulse 2s infinite; 
 }
-.btn-burger .line { width: 20px; height: 2px; background: white; border-radius: 2px; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
 
-/* --- SIDEBAR MÁS ESTRECHO --- */
+/* --- SIDEBAR (UNIFICADO CON HEADER) --- */
 .sidebar {
-    position: fixed; left: -310px; top: 0; 
-    width: 280px; /* Reducido de 320px */
-    height: 100%;
-    background: white; z-index: 2000; transition: 0.4s ease;
-    padding: 15px; /* Reducido de 25px */
-    box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-    box-sizing: border-box;
+    position: fixed; left: -310px; top: 0; width: 280px; height: 100%;
+    background: var(--primary); color: var(--text-main); z-index: 2000; 
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 15px; box-shadow: 5px 0 25px rgba(0,0,0,0.5);
     display: flex; flex-direction: column; overflow-y: auto;
+    border-right: 1px solid var(--border-dark);
 }
 .sidebar.active { left: 0; }
 
-.sidebar-header {
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 2px solid var(--accent);
-    padding-bottom: 8px; margin-bottom: 12px;
+.sidebar-header { 
+    display: flex; justify-content: space-between; align-items: center; 
+    border-bottom: 1px solid var(--border-dark); padding-bottom: 12px; margin-bottom: 12px; 
 }
-.sidebar-header h2 { margin: 0; font-size: 1rem; }
+.sidebar-header h2 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-main); }
 
 .sidebar-label { 
-    font-size: 0.65rem; font-weight: 800; color: var(--neutral); 
-    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: 0.65rem; font-weight: 800; color: var(--accent); 
+    margin: 18px 0 8px 0; text-transform: uppercase; letter-spacing: 1px; 
 }
 
-/* --- WEATHER CARD COMPACTA --- */
+/* --- CLIMA & STATS (DARK GLASS) --- */
 .weather-card {
     background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-    color: white; padding: 12px; border-radius: 8px;
-    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    color: white; padding: 12px; border-radius: 12px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
-.weather-temp { font-size: 1.5rem; font-weight: 800; }
-.weather-info { line-height: 1.2; }
-.weather-desc { font-size: 0.8rem; font-weight: 600; }
-.weather-details { font-size: 0.7rem; opacity: 0.9; }
+.weather-temp { font-size: 1.8rem; font-weight: 800; }
+.weather-desc { font-size: 0.9rem; font-weight: 600; }
+.weather-lottie { width: 50px; height: 50px; }
 
-/* --- CAJA DE ESTADÍSTICAS MINI --- */
 .stats-container-box {
-    background: #f1f5f9; border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-dark);
+    border-radius: 12px; padding: 15px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    backdrop-filter: blur(5px);
 }
-.stat-item { display: flex; align-items: center; gap: 8px; }
-.stat-icon { font-size: 1rem; }
-.stat-data { display: flex; flex-direction: column; line-height: 1; }
-.stat-label { font-size: 0.55rem; text-transform: uppercase; color: var(--neutral); font-weight: 700; margin-bottom: 2px; }
-.stat-value { font-size: 0.8rem; font-weight: 700; color: var(--primary); }
+.stat-data { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.55rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+.stat-value { font-size: 0.85rem; font-weight: 800; color: var(--text-main); }
 
-/* --- PLACEHOLDERS Y OTROS --- */
+/* --- TIMELINE DE INTENSIDAD --- */
+.timeline-container {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-dark);
+    border-radius: 12px; padding: 20px 15px; margin-bottom: 20px;
+}
+.timeline-track {
+    height: 14px; width: 100%; background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px; display: flex; overflow: hidden;
+    position: relative; border: 1px solid var(--border-dark);
+}
+.timeline-segment { height: 100%; flex: 1; transition: 0.2s; cursor: crosshair; }
+.timeline-segment:hover { filter: brightness(1.3); transform: scaleY(1.2); }
+
+.timeline-labels {
+    display: flex; justify-content: space-between; margin-top: 10px;
+    font-size: 0.6rem; color: var(--text-dim); font-weight: 700;
+}
+
+/* Tooltip */
+.timeline-segment::after {
+    content: attr(data-info); position: absolute; bottom: 25px; left: 50%;
+    transform: translateX(-50%); background: #000; color: #fff;
+    padding: 5px 10px; border-radius: 6px; font-size: 0.65rem;
+    white-space: nowrap; display: none; z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+.timeline-segment:hover::after { display: block; }
+
+/* --- MAPA & PANEL DE RIESGO --- */
+#map { height: calc(100vh - 50px); width: 100%; z-index: 1; }
+
+#panel-riesgo {
+    position: absolute; top: 65px; left: 15px; z-index: 1000;
+    width: 230px; background: var(--primary); color: var(--text-main);
+    padding: 15px; border-radius: 12px; border: 1px solid var(--border-dark);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+#panel-riesgo h2 { font-size: 0.7rem; margin-bottom: 10px; color: var(--accent); }
+
+.radar-control {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; padding: 12px 24px; border-radius: 50px;
+    background: var(--primary); color: var(--text-main); border: 2px solid var(--accent);
+    font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: 0.3s;
+}
+.radar-control.active { background: var(--accent); color: var(--primary); }
+
+/* --- UTILIDADES --- */
+.status-ok { color: var(--success); font-weight: 800; font-size: 0.7rem; text-align: center; }
+.colonia-card { 
+    display: flex; justify-content: space-between; padding: 8px 0; 
+    border-bottom: 1px solid var(--border-dark); font-size: 0.7rem; 
+}
+
 .kpi-placeholder {
-    background: #f8fafc; border: 1px dashed var(--neutral);
-    border-radius: 6px; padding: 10px;
-    text-align: center; color: var(--neutral); font-size: 0.75rem;
-    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border-dark);
+    border-radius: 10px; padding: 15px; text-align: center;
+    color: var(--text-dim); font-size: 0.7rem;
 }
 
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.4); z-index: 1999; display: none;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+    z-index: 1999; display: none;
 }
 .overlay.active { display: block; }
 
-/* --- MAPA Y PANELES --- */
-#map { height: calc(100vh - 50px); width: 100%; }
-#panel-riesgo {
-    position: absolute; top: 65px; left: 15px; z-index: 1000;
-    width: 240px; background: white; padding: 12px; border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-#panel-riesgo h2 { font-size: 0.75rem; margin: 0 0 8px 0; text-transform: uppercase; }
-
-.radar-control {
-    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-    z-index: 1000; padding: 10px 20px; border-radius: 50px;
-    background: white; border: 2px solid var(--primary); font-weight: 700;
-    font-size: 0.8rem; cursor: pointer; transition: 0.3s;
-}
-.radar-control.active { background: var(--primary); color: white; }
+/* Botones */
+.btn-burger { background: none; border: none; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+.btn-burger .line { width: 22px; height: 2px; background: white; }
+.btn-close { background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--text-dim); }
