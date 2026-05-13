@@ -82,6 +82,12 @@
             </div>
         </div>
         
+        <!-- NUEVO CONTENEDOR PARA LA GRÁFICA DE OPEN-METEO -->
+        <div class="sidebar-label">Predicción Próximas 24 hrs</div>
+        <div class="prediccion-container" style="background: white; border-radius: 8px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <canvas id="graficaPrediccion" width="400" height="200"></canvas>
+        </div>
+        
         <div class="sidebar-label">Métricas de Riesgo</div>
         <div class="kpi-placeholder">
             <p>Análisis de saturación de suelo</p>
@@ -103,8 +109,12 @@
 
     <div id="map"></div>
 
+    <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js Agregado -->
+    
+    <!-- LÓGICA PRINCIPAL -->
     <script src="/static/js/main.js"></script>
 </body>
 </html>
