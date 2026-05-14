@@ -175,14 +175,36 @@ async function sincronizarSistema() {
                 },
                 onEachFeature: (f, layer) => {
                     const p = f.properties;
-                    layer.bindPopup(`
-                        <div style="font-family: 'Inter', sans-serif; min-width: 150px;">
-                            <div style="font-weight: 800; border-bottom: 2px solid #38bdf8; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase;">${p.NOMBRE}</div>
-                            <div style="font-size: 0.75rem;">
-                                🏥 Hosp: ${p.hospitales || 0} | 🎓 Esc: ${p.escuelas || 0}
-                            </div>
-                        </div>
-                    `);
+            layer.bindPopup(`
+    <div style="font-family: 'Inter', sans-serif; min-width: 160px; color: var(--text-main);">
+        <!-- Título de la Colonia -->
+        <div style="font-weight: 800; border-bottom: 2px solid var(--accent); padding-bottom: 6px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+            ${p.NOMBRE}
+        </div>
+        
+        <!-- Indicadores (Hospitales, Escuelas y Centros Comunitarios) -->
+        <div style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+            <div style="display: flex; align-items: center; gap: 3px;">
+                <span style="filter: brightness(1.2);">🏥</span> 
+                <span>Hosp: ${p.hospitales || 0}</span>
+            </div>
+            
+            <span style="color: var(--border-dark);">|</span>
+            
+            <div style="display: flex; align-items: center; gap: 3px;">
+                <span style="filter: brightness(1.2);">🎓</span> 
+                <span>Esc: ${p.escuelas || 0}</span>
+            </div>
+
+            <span style="color: var(--border-dark);">|</span>
+
+            <div style="display: flex; align-items: center; gap: 3px;">
+                <span>🏠</span> 
+                <span>CC: ${p.centros || 0}</span>
+            </div>
+        </div>
+    </div>
+`);
                 }
             }).addTo(capaColonias);
         }
