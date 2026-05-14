@@ -12,6 +12,13 @@
 </head>
 <body>
 
+    <div id="emergency-banner" class="emergency-banner">
+        <div class="banner-content">
+            <span class="banner-icon">⚠️</span>
+            <span id="emergency-message">ALERTA: Tormenta severa detectada en las próximas horas.</span>
+        </div>
+    </div>
+
     <header class="header">
         <div class="brand">
             <button class="btn-burger" onclick="toggleSidebar()" aria-label="Menú">
@@ -82,10 +89,9 @@
 
         <div class="sidebar-label">Pronóstico de Impacto (24h)</div>
         <div class="timeline-container">
-            <div id="timeline-track" class="timeline-track">
-                </div>
+            <div id="timeline-track" class="timeline-track"></div>
             <div class="timeline-labels">
-               <span>Ahora</span>
+                <span>Ahora</span>
                 <span>+6h</span>
                 <span>+12h</span>
                 <span>+18h</span>
@@ -97,13 +103,40 @@
         <div class="kpi-placeholder">
             <p>Monitoreo de saturación disponible en tormenta activa.</p>
         </div>
+
+        <div class="sidebar-label">Herramientas de Sistema</div>
+        <button onclick="simularTormenta()" class="btn-simulacion">
+            🧪 EJECUTAR SIMULACIÓN TIF
+        </button>
     </aside>
 
     <section id="panel-riesgo">
         <h2>📊 Resumen de Riesgo</h2>
+        
         <div id="lista-colonias">
             <div class="status-container">
                 <div class="status-ok">● CIUDAD BAJO MONITOREO</div>
+            </div>
+        </div>
+
+        <div class="legend-table">
+            <div class="legend-grid">
+                <div class="legend-cell">
+                    <span class="dot-indicator critico"></span>
+                    <span class="legend-text">>30mm</span>
+                </div>
+                <div class="legend-cell">
+                    <span class="dot-indicator alto"></span>
+                    <span class="legend-text">>15mm</span>
+                </div>
+                <div class="legend-cell">
+                    <span class="dot-indicator medio"></span>
+                    <span class="legend-text">>5mm</span>
+                </div>
+                <div class="legend-cell">
+                    <span class="dot-indicator bajo"></span>
+                    <span class="legend-text">>0.1mm</span>
+                </div>
             </div>
         </div>
     </section>
@@ -116,7 +149,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <script src="/static/js/main.js"></script>
 </body>
 </html>
