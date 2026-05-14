@@ -27,7 +27,25 @@ const capaRadar = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms
 });
 const capaColonias = L.layerGroup().addTo(map);
 
-// --- LÓGICA DE INTERFAZ ---
+// --- UTILIDADES ---
+
+/**
+ * Limpia el texto para comparaciones seguras (quita acentos, espacios y pasa a mayúsculas)
+ */
+function normalizarTexto(t) {
+    if (!t) return "";
+    return String(t).toUpperCase().trim()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function obtenerColorRiesgo(v) {
+    if (v > 30) return '#ef4444'; // Rojo (Crítico)
+    if (v > 15) return '#f59e0b'; // Naranja (Alto)
+    if (v > 5)  return '#eab308'; // Amarillo (Medio)
+    if (v > 0.1) return '#38bdf8'; // Celeste (Bajo)
+    return 'rgba(255, 255, 255, 0.1)'; // Neutro
+}
+
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('active');
     document.getElementById('overlay').classList.toggle('active');
@@ -47,37 +65,26 @@ function toggleRadar() {
     }
 }
 
-// Colores unificados con el sistema de riesgo (RGB/Hex)
-function obtenerColorRiesgo(v) {
-    if (v > 30) return '#ef4444'; // Rojo (Crítico)
-    if (v > 15) return '#f59e0b'; // Naranja (Alto)
-    if (v > 5)  return '#eab308'; // Amarillo (Medio)
-    if (v > 0.1) return '#38bdf8'; // Celeste (Bajo)
-    return 'rgba(255, 255, 255, 0.1)'; // Neutro
-}
-
 // --- SISTEMA DE ALERTAS CRÍTICAS ---
 function verificarAlertasCriticas(datos) {
     const banner = document.getElementById('emergency-banner');
     const mensaje = document.getElementById('emergency-message');
     
-    // Buscamos si hay alguna hora con más de 25mm (Tormenta severa)
     const horaCritica = datos.find(d => d.mm > 25);
     
     if (horaCritica) {
         const fecha = new Date(horaCritica.hora);
         const horaTxt = fecha.getHours().toString().padStart(2, '0') + ":00";
-        
         mensaje.innerText = `ALERTA CRÍTICA: Tormenta severa detectada (Impacto estimado: ${horaTxt})`;
         banner.classList.add('active');
-        document.querySelector('.header').style.background = '#991b1b'; // Header Rojo Alerta
+        document.querySelector('.header').style.background = '#991b1b'; 
     } else {
         if (banner) banner.classList.remove('active');
-        document.querySelector('.header').style.background = '#1e293b'; // Header Normal
+        document.querySelector('.header').style.background = '#1e293b'; 
     }
 }
 
-// --- CLIMA Y LOTTIE ---
+// --- CLIMA ACTUAL ---
 let animacionClima = null;
 
 async function obtenerClimaJuarez() {
@@ -107,11 +114,10 @@ async function obtenerClimaJuarez() {
             container: document.getElementById('weather-lottie'),
             renderer: 'svg', loop: true, autoplay: true, path: lottieUrl
         });
-
     } catch (error) { console.error("Error clima:", error); }
 }
 
-// --- SLIDER DE INTENSIDAD (TIMELINE) ---
+// --- TIMELINE ---
 async function cargarPrediccionLluvia() {
     try {
         const res = await fetch('/prediccion-lluvia');
@@ -131,22 +137,18 @@ function dibujarTimeline(datos) {
     datos.forEach(hora => {
         const segment = document.createElement('div');
         segment.className = 'timeline-segment';
-        
         const mm = hora.mm || 0;
-        const color = obtenerColorRiesgo(mm);
-
-        segment.style.backgroundColor = color;
+        segment.style.backgroundColor = obtenerColorRiesgo(mm);
         segment.style.borderRight = '1px solid rgba(0,0,0,0.2)'; 
         
         const fecha = new Date(hora.hora);
         const horaTxt = fecha.getHours().toString().padStart(2, '0') + ":00";
         segment.setAttribute('data-info', `${horaTxt} | ${mm}mm | Prob: ${hora.probabilidad}%`);
-        
         track.appendChild(segment);
     });
 }
 
-// --- SINCRONIZACIÓN CON BACKEND ---
+// --- SINCRONIZACIÓN Y MAPA ---
 async function sincronizarSistema() {
     try {
         const res = await fetch('/estado');
@@ -161,13 +163,14 @@ async function sincronizarSistema() {
             const geojsonC = await resC.json();
             L.geoJSON(geojsonC, {
                 style: (f) => {
-                    const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === (f.properties.NOMBRE || "").toUpperCase());
+                    const n = normalizarTexto(f.properties.NOMBRE);
+                    const info = data.colonias_criticas.find(c => normalizarTexto(c.nombre) === n);
                     const v = info ? info.intensidad : 0;
                     return { 
                         fillColor: obtenerColorRiesgo(v), 
-                        weight: 0.20, 
-                        color: '#00000059', 
-                        fillOpacity: v > 0 ? 0.7 : 0.3 
+                        weight: 0.5, 
+                        color: '#0000005d', 
+                        fillOpacity: v > 0 ? 0.7 : 0.2 
                     };
                 },
                 onEachFeature: (f, layer) => {
@@ -175,78 +178,67 @@ async function sincronizarSistema() {
                     layer.bindPopup(`
                         <div style="font-family: 'Inter', sans-serif; min-width: 150px;">
                             <div style="font-weight: 800; border-bottom: 2px solid #38bdf8; padding-bottom: 4px; margin-bottom: 8px; text-transform: uppercase;">${p.NOMBRE}</div>
-                            <div style="display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 0.75rem;">
-                                <span>🏥 Hospitales: <b>${p.hospitales || 0}</b></span>
-                                <span>🎓 Escuelas: <b>${p.escuelas || 0}</b></span>
-                                <span>🏠 C. Comunitarios: <b>${p.comunitarios || 0}</b></span>
+                            <div style="font-size: 0.75rem;">
+                                🏥 Hosp: ${p.hospitales || 0} | 🎓 Esc: ${p.escuelas || 0}
                             </div>
                         </div>
                     `);
                 }
             }).addTo(capaColonias);
-        } else {
-            capaColonias.eachLayer(layer => {
-                if (layer.setStyle && layer.feature) {
-                    const n = (layer.feature.properties.NOMBRE || "").toUpperCase();
-                    const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === n);
-                    const v = info ? info.intensidad : 0;
-                    layer.setStyle({ fillColor: obtenerColorRiesgo(v), fillOpacity: v > 0 ? 0.7 : 0.3 });
-                }
-            });
         }
-
-        const lista = document.getElementById('lista-colonias');
-        lista.innerHTML = data.colonias_criticas.length > 0 ? 
-            data.colonias_criticas.map(c => `
-                <div class="colonia-card">
-                    <b>${c.nombre}</b>
-                    <span style="color:${obtenerColorRiesgo(c.intensidad)}">${c.intensidad} mm/hr</span>
-                </div>`).join('') :
-            `<div class="status-ok">● CIUDAD BAJO MONITOREO</div>`;
-            
     } catch (err) { console.error("Error sync:", err); }
 }
 
-// --- MOTOR DE SIMULACIÓN (TIF REAL) ---
+// --- MOTOR DE SIMULACIÓN TIF ---
 async function simularTormenta() {
-    console.log("Invocando simulación desde archivo TIF real...");
+    console.log("Iniciando simulación desde TIF...");
     try {
         const res = await fetch('/simular-tif');
         const result = await res.json();
         
         if (result.status === 'success') {
-            const mmSimulado = result.max_mm;
+            const mmMaximo = result.max_mm; 
+            const afectadas = result.colonias_afectadas || [];
 
+            // 1. Forzar actualización del Timeline para reflejar la simulación
             const ahora = new Date();
-            const datosSimulados = Array.from({ length: 24 }, (_, i) => {
-                const horaSimulada = new Date(ahora.getTime() + (i * 3600000));
-                let mm = (i >= 3 && i <= 5) ? mmSimulado : (i > 5 && i < 8 ? mmSimulado / 2 : 0);
-                return { 
-                    hora: horaSimulada.toISOString(), 
-                    mm: mm, 
-                    probabilidad: (i >= 3 && i <= 8 ? 95 : 0) 
-                };
+            const datosSim = Array.from({ length: 24 }, (_, i) => {
+                const hSim = new Date(ahora.getTime() + (i * 3600000));
+                let mm = (i >= 3 && i <= 6) ? mmMaximo : (i > 6 && i < 9 ? mmMaximo / 2 : 0);
+                return { hora: hSim.toISOString(), mm: mm, probabilidad: 95 };
             });
+            dibujarTimeline(datosSim);
+            verificarAlertasCriticas(datosSim);
 
-            dibujarTimeline(datosSimulados);
-            verificarAlertasCriticas(datosSimulados);
-
+            // 2. Pintado del Mapa por Colonia
+            let matches = 0;
             capaColonias.eachLayer(layer => {
-                if (layer.setStyle) {
-                    layer.setStyle({ 
-                        fillColor: obtenerColorRiesgo(mmSimulado), 
-                        fillOpacity: 0.8, 
-                        weight: 2 
-                    });
-                }
+                // Leaflet geoJSON layers can have sub-layers
+                layer.eachLayer(subLayer => {
+                    if (subLayer.feature) {
+                        const nMapa = normalizarTexto(subLayer.feature.properties.NOMBRE);
+                        const lluvia = afectadas.find(c => normalizarTexto(c.nombre) === nMapa);
+                        
+                        if (lluvia) {
+                            matches++;
+                            subLayer.setStyle({ 
+                                fillColor: obtenerColorRiesgo(lluvia.intensidad), 
+                                fillOpacity: 0.85, 
+                                weight: 2.5,
+                                color: '#ffffff'
+                            });
+                        } else {
+                            subLayer.setStyle({ fillOpacity: 0.05, weight: 0.2 });
+                        }
+                    }
+                });
             });
-            alert(`Simulación TIF Exitosa: ${mmSimulado}mm detectados.`);
+
+            alert(`Simulación procesada.\nImpacto máximo: ${mmMaximo}mm.\nColonias afectadas en mapa: ${matches}`);
         } else {
-            alert("Error en simulación: " + result.detail);
+            alert("Error: " + result.detail);
         }
-    } catch (error) {
-        console.error("Error de conexión:", error);
-    }
+    } catch (error) { console.error("Error en simulación:", error); }
 }
 
 // --- INICIALIZACIÓN ---
@@ -254,7 +246,5 @@ obtenerClimaJuarez();
 cargarPrediccionLluvia();
 sincronizarSistema();
 
-// Intervalos de actualización
-setInterval(obtenerClimaJuarez, 1800000);   // Cada 30 min
-setInterval(cargarPrediccionLluvia, 1800000); // Cada 30 min
-setInterval(sincronizarSistema, 15000);       // Cada 15 seg
+setInterval(obtenerClimaJuarez, 1800000); 
+setInterval(sincronizarSistema, 30000);rec
