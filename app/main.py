@@ -1,13 +1,14 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 import geopandas as gpd
 import json
+import rasterio # <-- Nueva para leer el TIF
 from .radar_core import RadarProcessor 
 import uvicorn
 from datetime import datetime
 import os
-import httpx # <-- Librería para la API de Open-Meteo
+import httpx 
 
 # Librería para la automatización
 from fastapi_utils.tasks import repeat_every
@@ -76,13 +77,40 @@ async def serve_index():
 async def consultar_estado():
     return estado_ciudad
 
-# --- NUEVO ENDPOINT DE PREDICCIÓN OPEN-METEO ---
+# --- ENDPOINT DE SIMULACIÓN DESDE TIF ---
+@app.get("/simular-tif")
+async def simular_tif():
+    """
+    Lee un archivo TIF específico y devuelve el valor máximo de precipitación
+    para simular una respuesta de emergencia en el frontend.
+    """
+    tif_path = r"D:\sistema_inundaciones_juarez\rainfall_filtered_tif_test2\rainfall_filtered_tif_test2_moved.tif"
+    
+    if not os.path.exists(tif_path):
+        raise HTTPException(status_code=404, detail="Archivo TIF de simulación no encontrado.")
+
+    try:
+        with rasterio.open(tif_path) as src:
+            # Leemos la primera banda (precipitación)
+            band1 = src.read(1)
+            # Obtenemos el valor máximo (limpiando posibles valores nulos/inf)
+            import numpy as np
+            max_lluvia = float(np.nanmax(band1))
+            
+            return {
+                "status": "success",
+                "max_mm": max_lluvia,
+                "timestamp": datetime.now().isoformat(),
+                "archivo": os.path.basename(tif_path)
+            }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500, 
+            content={"status": "error", "detail": f"Error al leer el TIF: {str(e)}"}
+        )
+
 @app.get("/prediccion-lluvia")
 async def obtener_prediccion_lluvia(lat: float = 31.7333, lon: float = -106.4833):
-    """
-    Obtiene la predicción de lluvia por hora usando Open-Meteo.
-    Por defecto, usa las coordenadas de Ciudad Juárez.
-    """
     url = (
         f"https://api.open-meteo.com/v1/forecast?"
         f"latitude={lat}&longitude={lon}&"
@@ -100,7 +128,6 @@ async def obtener_prediccion_lluvia(lat: float = 31.7333, lon: float = -106.4833
             precipitacion = data["hourly"]["precipitation"]
             probabilidad = data["hourly"]["precipitation_probability"]
             
-            # Formateamos los datos para las próximas 24 horas
             pronostico = [
                 {"hora": t, "mm": p, "probabilidad": prob}
                 for t, p, prob in zip(tiempos, precipitacion, probabilidad)
@@ -113,31 +140,24 @@ async def obtener_prediccion_lluvia(lat: float = 31.7333, lon: float = -106.4833
 
 @app.get("/mapa-colonias")
 async def get_colonias_geo():
-    """Carga colonias y realiza el conteo de infraestructura internamente"""
     ruta_colonias = "SHP/Colonias/Colonias.shp"
     if not os.path.exists(ruta_colonias):
         return {"error": f"No se encontró el archivo en {ruta_colonias}"}
     
-    # 1. Cargar colonias
     df_colonias = gpd.read_file(ruta_colonias).to_crs(epsg=4326)
 
-    # 2. Rutas de infraestructura para el conteo
     capas_puntos = [
         ("hospitales", "SHP/Hospitales_2025/Hospitales_2025.shp"),
         ("comunitarios", "SHP/CENTROS_COMUNITARIOS_2025/CENTROS_COMUNITARIOS_2025.shp"),
         ("escuelas", "SHP/Escuelas_17122025/Escuelas_17122025.shp")
     ]
 
-    # 3. Realizar Unión Espacial (Spatial Join) para cada capa
     for etiqueta, ruta in capas_puntos:
         if os.path.exists(ruta):
             try:
                 puntos = gpd.read_file(ruta).to_crs(epsg=4326)
-                # Unimos puntos con colonias
                 unidos = gpd.sjoin(puntos, df_colonias, how="left", predicate="within")
-                # Contamos cuántos puntos cayeron en cada índice de colonia
                 conteo = unidos.groupby("index_right").size()
-                # Asignamos el conteo al dataframe original
                 df_colonias[etiqueta] = df_colonias.index.map(conteo).fillna(0).astype(int)
             except Exception as e:
                 print(f"Error procesando {etiqueta}: {e}")
