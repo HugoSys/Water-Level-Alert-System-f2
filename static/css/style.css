@@ -21,7 +21,7 @@ body {
 /* --- BANNER DE EMERGENCIA --- */
 .emergency-banner {
     display: none; 
-    background: #ef4444;
+    background: var(--danger);
     color: white;
     padding: 10px 0;
     text-align: center;
@@ -238,13 +238,13 @@ body {
 }
 
 .dot-indicator { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.dot-indicator.critico { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
-.dot-indicator.alto    { background: #f59e0b; }
+.dot-indicator.critico { background: var(--danger); box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+.dot-indicator.alto    { background: var(--warning); }
 .dot-indicator.medio   { background: #eab308; }
-.dot-indicator.bajo    { background: #38bdf8; }
+.dot-indicator.bajo    { background: var(--accent); }
 
 .status-ok {
-    color: #10b981;
+    color: var(--success);
     font-size: 0.75rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -298,3 +298,19 @@ body {
     z-index: 1999; display: none;
 }
 .overlay.active { display: block; }
+
+/* --- POPUPS LEAFLET CUSTOM (TEMA OSCURO) --- */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    background-color: var(--primary) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
+}
+
+.leaflet-popup-close-button {
+    color: var(--text-dim) !important;
+}
+
+.leaflet-popup-close-button:hover {
+    color: var(--text-main) !important;
+}
