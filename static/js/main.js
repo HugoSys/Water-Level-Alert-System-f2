@@ -47,13 +47,34 @@ function toggleRadar() {
     }
 }
 
-// Colores unificados con el sistema de riesgo
+// Colores unificados con el sistema de riesgo (RGB/Hex)
 function obtenerColorRiesgo(v) {
     if (v > 30) return '#ef4444'; // Rojo (Crítico)
     if (v > 15) return '#f59e0b'; // Naranja (Alto)
     if (v > 5)  return '#eab308'; // Amarillo (Medio)
     if (v > 0.1) return '#38bdf8'; // Celeste (Bajo)
-    return 'rgba(255, 255, 255, 0.1)'; // Transparente/Gris en Sidebar Oscuro
+    return 'rgba(255, 255, 255, 0.1)'; // Neutro
+}
+
+// --- SISTEMA DE ALERTAS CRÍTICAS ---
+function verificarAlertasCriticas(datos) {
+    const banner = document.getElementById('emergency-banner');
+    const mensaje = document.getElementById('emergency-message');
+    
+    // Buscamos si hay alguna hora con más de 25mm (Tormenta severa)
+    const horaCritica = datos.find(d => d.mm > 25);
+    
+    if (horaCritica) {
+        const fecha = new Date(horaCritica.hora);
+        const horaTxt = fecha.getHours().toString().padStart(2, '0') + ":00";
+        
+        mensaje.innerText = `ALERTA CRÍTICA: Tormenta severa detectada (Impacto estimado: ${horaTxt})`;
+        banner.classList.add('active');
+        document.querySelector('.header').style.background = '#991b1b'; // Header Rojo Alerta
+    } else {
+        if (banner) banner.classList.remove('active');
+        document.querySelector('.header').style.background = '#1e293b'; // Header Normal
+    }
 }
 
 // --- CLIMA Y LOTTIE ---
@@ -66,7 +87,6 @@ async function obtenerClimaJuarez() {
         const data = await res.json();
         const clima = data.current_weather;
         
-        // Actualizar UI Clima
         document.getElementById('weather-temp').innerText = `${clima.temperature}°C`;
         document.getElementById('weather-details').innerText = `Viento: ${clima.windspeed} km/h`;
         document.getElementById('stat-humidity').innerText = `${data.hourly.relative_humidity_2m[0]}%`;
@@ -74,7 +94,6 @@ async function obtenerClimaJuarez() {
         document.getElementById('stat-clouds').innerText = `${data.hourly.cloud_cover[0]}%`;
         document.getElementById('stat-pop').innerText = `${data.hourly.precipitation_probability[0]}%`;
 
-        // Lógica de Iconos Animados
         let lottieUrl = "https://assets3.lottiefiles.com/temp/lf20_dgjK9i.json"; 
         let desc = "Nubosidad Parcial";
         
@@ -92,13 +111,14 @@ async function obtenerClimaJuarez() {
     } catch (error) { console.error("Error clima:", error); }
 }
 
-// --- SLIDER DE INTENSIDAD ---
+// --- SLIDER DE INTENSIDAD (TIMELINE) ---
 async function cargarPrediccionLluvia() {
     try {
         const res = await fetch('/prediccion-lluvia');
         const result = await res.json();
         if (result.status === 'success') {
             dibujarTimeline(result.data);
+            verificarAlertasCriticas(result.data);
         }
     } catch (e) { console.error("Error en timeline:", e); }
 }
@@ -116,7 +136,7 @@ function dibujarTimeline(datos) {
         const color = obtenerColorRiesgo(mm);
 
         segment.style.backgroundColor = color;
-        segment.style.borderRight = '1px solid rgba(0,0,0,0.2)'; // División sutil
+        segment.style.borderRight = '1px solid rgba(0,0,0,0.2)'; 
         
         const fecha = new Date(hora.hora);
         const horaTxt = fecha.getHours().toString().padStart(2, '0') + ":00";
@@ -132,12 +152,10 @@ async function sincronizarSistema() {
         const res = await fetch('/estado');
         const data = await res.json();
         
-        // Actualizar hora en el Header
         if(data.ultima_actualizacion.includes(' ')) {
             document.getElementById('hora-display').innerText = data.ultima_actualizacion.split(' ')[1];
         }
 
-        // Renderizar Colonias en el Mapa
         if (capaColonias.getLayers().length === 0) {
             const resC = await fetch('/mapa-colonias');
             const geojsonC = await resC.json();
@@ -146,7 +164,10 @@ async function sincronizarSistema() {
                     const info = data.colonias_criticas.find(c => c.nombre.toUpperCase() === (f.properties.NOMBRE || "").toUpperCase());
                     const v = info ? info.intensidad : 0;
                     return { 
-                        fillColor: obtenerColorRiesgo(v), weight: 1.5, color: 'white', fillOpacity: v > 0 ? 0.7 : 0.3 
+                        fillColor: obtenerColorRiesgo(v), 
+                        weight: 0.20, 
+                        color: '#00000059', 
+                        fillOpacity: v > 0 ? 0.7 : 0.3 
                     };
                 },
                 onEachFeature: (f, layer) => {
@@ -174,7 +195,6 @@ async function sincronizarSistema() {
             });
         }
 
-        // Lista Lateral de Riesgo
         const lista = document.getElementById('lista-colonias');
         lista.innerHTML = data.colonias_criticas.length > 0 ? 
             data.colonias_criticas.map(c => `
@@ -187,11 +207,54 @@ async function sincronizarSistema() {
     } catch (err) { console.error("Error sync:", err); }
 }
 
+// --- MOTOR DE SIMULACIÓN (TIF REAL) ---
+async function simularTormenta() {
+    console.log("Invocando simulación desde archivo TIF real...");
+    try {
+        const res = await fetch('/simular-tif');
+        const result = await res.json();
+        
+        if (result.status === 'success') {
+            const mmSimulado = result.max_mm;
+
+            const ahora = new Date();
+            const datosSimulados = Array.from({ length: 24 }, (_, i) => {
+                const horaSimulada = new Date(ahora.getTime() + (i * 3600000));
+                let mm = (i >= 3 && i <= 5) ? mmSimulado : (i > 5 && i < 8 ? mmSimulado / 2 : 0);
+                return { 
+                    hora: horaSimulada.toISOString(), 
+                    mm: mm, 
+                    probabilidad: (i >= 3 && i <= 8 ? 95 : 0) 
+                };
+            });
+
+            dibujarTimeline(datosSimulados);
+            verificarAlertasCriticas(datosSimulados);
+
+            capaColonias.eachLayer(layer => {
+                if (layer.setStyle) {
+                    layer.setStyle({ 
+                        fillColor: obtenerColorRiesgo(mmSimulado), 
+                        fillOpacity: 0.8, 
+                        weight: 2 
+                    });
+                }
+            });
+            alert(`Simulación TIF Exitosa: ${mmSimulado}mm detectados.`);
+        } else {
+            alert("Error en simulación: " + result.detail);
+        }
+    } catch (error) {
+        console.error("Error de conexión:", error);
+    }
+}
+
 // --- INICIALIZACIÓN ---
 obtenerClimaJuarez();
 cargarPrediccionLluvia();
 sincronizarSistema();
 
-setInterval(obtenerClimaJuarez, 1800000);   
-setInterval(cargarPrediccionLluvia, 1800000); 
-setInterval(sincronizarSistema, 15000);
+// Intervalos de actualización
+setInterval(obtenerClimaJuarez, 1800000);   // Cada 30 min
+setInterval(cargarPrediccionLluvia, 1800000); // Cada 30 min
+setInterval(sincronizarSistema, 15000);       // Cada 15 seg
