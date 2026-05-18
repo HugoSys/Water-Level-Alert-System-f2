@@ -19,18 +19,36 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 
 // --- CAPAS Y ESTADOS ---
 let radarActive = false;
+let coloniaSeleccionada = null; // <--- NUEVO: Guarda la colonia resaltada
+
 const capaRadar = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi", {
     layers: 'nexrad-n0r-900913',
     format: 'image/png',
     transparent: true,
     opacity: 0.65
 });
+
 const capaColonias = L.layerGroup().addTo(map);
+
+// 1. Creamos los grupos de capas para los filtros (Ninguno activo por defecto para no saturar)
+const capaBomberos = L.layerGroup();
+const capaEscuelas = L.layerGroup();
+const capaHospitales = L.layerGroup();
+const capaComunitarios = L.layerGroup();
+
+// 2. Control de capas (Filtros en la esquina superior derecha, colapsado)
+const controlesCapas = {
+    "🚒 Estaciones de Bomberos": capaBomberos,
+    "🎓 Escuelas SEECH": capaEscuelas,
+    "🏥 Hospitales": capaHospitales,
+    "🏠 Centros Comunitarios": capaComunitarios
+};
+L.control.layers(null, controlesCapas, { position: 'topright', collapsed: true }).addTo(map);
 
 // --- UTILIDADES ---
 
 /**
- * Limpia el texto para comparaciones seguras (quita acentos, espacios y pasa a mayúsculas)
+ * Limpia el texto para comparaciones seguras
  */
 function normalizarTexto(t) {
     if (!t) return "";
@@ -148,6 +166,52 @@ function dibujarTimeline(datos) {
     });
 }
 
+// --- INFRAESTRUCTURA PUNTUAL (PUNTOS Y FILTROS) ---
+async function cargarInfraestructura() {
+    const crearMarcador = (feature, latlng, color, titulo) => {
+        return L.circleMarker(latlng, {
+            radius: 5,
+            fillColor: color,
+            color: "#ffffff",
+            weight: 1.5,
+            opacity: 1,
+            fillOpacity: 0.9
+        }).bindPopup(`<b>${titulo}</b><br>${feature.properties.NOMBRE || 'Sin nombre registrado'}`);
+    };
+
+    try {
+        const res = await fetch('/mapa-bomberos');
+        const data = await res.json();
+        if (!data.error) {
+            L.geoJSON(data, { pointToLayer: (f, ll) => crearMarcador(f, ll, "#dc2626", "🚒 Bomberos") }).addTo(capaBomberos);
+        }
+    } catch (e) { console.error("Error bomberos:", e); }
+
+    try {
+        const res = await fetch('/mapa-escuelas');
+        const data = await res.json();
+        if (!data.error) {
+            L.geoJSON(data, { pointToLayer: (f, ll) => crearMarcador(f, ll, "#2563eb", "🎓 Escuela SEECH") }).addTo(capaEscuelas);
+        }
+    } catch (e) { console.error("Error escuelas:", e); }
+
+    try {
+        const res = await fetch('/mapa-hospitales');
+        const data = await res.json();
+        if (!data.error) {
+            L.geoJSON(data, { pointToLayer: (f, ll) => crearMarcador(f, ll, "#16a34a", "🏥 Hospital") }).addTo(capaHospitales);
+        }
+    } catch (e) { console.error("Error hospitales:", e); }
+
+    try {
+        const res = await fetch('/mapa-comunitarios');
+        const data = await res.json();
+        if (!data.error) {
+            L.geoJSON(data, { pointToLayer: (f, ll) => crearMarcador(f, ll, "#9333ea", "🏠 Centro Comunitario") }).addTo(capaComunitarios);
+        }
+    } catch (e) { console.error("Error comunitarios:", e); }
+}
+
 // --- SINCRONIZACIÓN Y MAPA ---
 async function sincronizarSistema() {
     try {
@@ -168,21 +232,19 @@ async function sincronizarSistema() {
                     const v = info ? info.intensidad : 0;
                     return { 
                         fillColor: obtenerColorRiesgo(v), 
-                        weight: 0.5, 
+                        weight: 0.3, 
                         color: '#0000005d', 
                         fillOpacity: v > 0 ? 0.7 : 0.2 
                     };
                 },
                 onEachFeature: (f, layer) => {
                     const p = f.properties;
-            layer.bindPopup(`
-    <div style="font-family: 'Inter', sans-serif; min-width: 160px; color: var(--text-main);">
-        <!-- Título de la Colonia -->
+                    layer.bindPopup(`
+    <div style="font-family: 'Inter', sans-serif; min-width: 220px; color: var(--text-main);">
         <div style="font-weight: 800; border-bottom: 2px solid var(--accent); padding-bottom: 6px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
             ${p.NOMBRE}
         </div>
         
-        <!-- Indicadores (Hospitales, Escuelas y Centros Comunitarios) -->
         <div style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
             <div style="display: flex; align-items: center; gap: 3px;">
                 <span style="filter: brightness(1.2);">🏥</span> 
@@ -200,11 +262,51 @@ async function sincronizarSistema() {
 
             <div style="display: flex; align-items: center; gap: 3px;">
                 <span>🏠</span> 
-                <span>CC: ${p.centros || 0}</span>
+                <span>CC: ${p.comunitarios || 0}</span>
+            </div>
+
+            <span style="color: var(--border-dark);">|</span>
+
+            <div style="display: flex; align-items: center; gap: 3px;">
+                <span>🚒</span> 
+                <span>Bomb: ${p.bomberos || 0}</span>
             </div>
         </div>
     </div>
 `);
+                    // --- NUEVO: EVENTOS PARA RESALTAR LA COLONIA AL HACER CLIC ---
+                    layer.on({
+                        click: function(e) {
+                            const geojsonLayer = capaColonias.getLayers()[0];
+                            
+                            // 1. Restaurar el estilo de la colonia anterior si existe
+                            if (coloniaSeleccionada) {
+                                geojsonLayer.resetStyle(coloniaSeleccionada);
+                            }
+
+                            // 2. Aplicar el resaltado a la colonia clickeada
+                            const capaClick = e.target;
+                            capaClick.setStyle({
+                                weight: 3,               // Borde más grueso
+                                color: '#0ea5e9',        // Azul brillante
+                                fillOpacity: 0.8         // Relleno más sólido
+                            });
+
+                            // Traerla al frente para que el borde no quede oculto por las colonias vecinas
+                            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                                capaClick.bringToFront();
+                            }
+
+                            // 3. Guardarla como la nueva selección
+                            coloniaSeleccionada = capaClick;
+                        },
+                        popupclose: function(e) {
+                            // Cuando se cierra el popup, regresamos la colonia a su estado normal
+                            const geojsonLayer = capaColonias.getLayers()[0];
+                            geojsonLayer.resetStyle(e.target);
+                            coloniaSeleccionada = null;
+                        }
+                    });
                 }
             }).addTo(capaColonias);
         }
@@ -222,7 +324,6 @@ async function simularTormenta() {
             const mmMaximo = result.max_mm; 
             const afectadas = result.colonias_afectadas || [];
 
-            // 1. Forzar actualización del Timeline para reflejar la simulación
             const ahora = new Date();
             const datosSim = Array.from({ length: 24 }, (_, i) => {
                 const hSim = new Date(ahora.getTime() + (i * 3600000));
@@ -232,10 +333,8 @@ async function simularTormenta() {
             dibujarTimeline(datosSim);
             verificarAlertasCriticas(datosSim);
 
-            // 2. Pintado del Mapa por Colonia
             let matches = 0;
             capaColonias.eachLayer(layer => {
-                // Leaflet geoJSON layers can have sub-layers
                 layer.eachLayer(subLayer => {
                     if (subLayer.feature) {
                         const nMapa = normalizarTexto(subLayer.feature.properties.NOMBRE);
@@ -267,6 +366,7 @@ async function simularTormenta() {
 obtenerClimaJuarez();
 cargarPrediccionLluvia();
 sincronizarSistema();
+cargarInfraestructura(); // Carga las 4 capas y las deja listas en los filtros
 
 setInterval(obtenerClimaJuarez, 1800000); 
-setInterval(sincronizarSistema, 30000);rec
+setInterval(sincronizarSistema, 30000);
