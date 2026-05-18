@@ -160,7 +160,8 @@ async def get_colonias_geo():
     capas_puntos = [
         ("hospitales", "SHP/Hospitales_2025/Hospitales_2025.shp"),
         ("comunitarios", "SHP/CENTROS_COMUNITARIOS_2025/CENTROS_COMUNITARIOS_2025.shp"),
-        ("escuelas", "SHP/Escuelas_17122025/Escuelas_17122025.shp")
+        ("escuelas", "SHP/SEECH070326/SEECH070326.shp"),
+        ("bomberos", "SHP/EstacionBomberos/EstacionBomberos/EstacionbomberosWgs84.shp")
     ]
 
     for etiqueta, ruta in capas_puntos:
@@ -170,9 +171,11 @@ async def get_colonias_geo():
                 unidos = gpd.sjoin(puntos, df_colonias, how="left", predicate="within")
                 conteo = unidos.groupby("index_right").size()
                 df_colonias[etiqueta] = df_colonias.index.map(conteo).fillna(0).astype(int)
-            except:
+            except Exception as e:
+                print(f"Error procesando la capa {etiqueta}: {e}")
                 df_colonias[etiqueta] = 0
         else:
+            print(f"Advertencia: No se encontró el archivo en {ruta}")
             df_colonias[etiqueta] = 0
 
     return json.loads(df_colonias.to_json())
@@ -208,6 +211,52 @@ async def get_vialidades():
         df = gpd.read_file(ruta).to_crs(epsg=4326)
         return json.loads(df.to_json())
     return {"error": "Archivo de vialidades no encontrado"}
+
+# --- ENDPOINTS INDIVIDUALES DE INFRAESTRUCTURA ---
+
+@app.get("/mapa-bomberos")
+async def obtener_bomberos():
+    ruta = "SHP/EstacionBomberos/EstacionBomberos/EstacionbomberosWgs84.shp"
+    if os.path.exists(ruta):
+        try:
+            df = gpd.read_file(ruta).to_crs(epsg=4326)
+            return json.loads(df.to_json())
+        except Exception as e:
+            return {"error": f"Error al procesar bomberos: {str(e)}"}
+    return {"error": "Archivo de estaciones de bomberos no encontrado"}
+
+@app.get("/mapa-escuelas")
+async def obtener_escuelas_seech():
+    ruta = "SHP/SEECH070326/SEECH070326.shp"
+    if os.path.exists(ruta):
+        try:
+            df = gpd.read_file(ruta).to_crs(epsg=4326)
+            return json.loads(df.to_json())
+        except Exception as e:
+            return {"error": f"Error al procesar escuelas: {str(e)}"}
+    return {"error": "Archivo de escuelas SEECH no encontrado"}
+
+@app.get("/mapa-hospitales")
+async def obtener_hospitales():
+    ruta = "SHP/Hospitales_2025/Hospitales_2025.shp"
+    if os.path.exists(ruta):
+        try:
+            df = gpd.read_file(ruta).to_crs(epsg=4326)
+            return json.loads(df.to_json())
+        except Exception as e:
+            return {"error": f"Error al procesar hospitales: {str(e)}"}
+    return {"error": "Archivo de hospitales no encontrado"}
+
+@app.get("/mapa-comunitarios")
+async def obtener_comunitarios():
+    ruta = "SHP/CENTROS_COMUNITARIOS_2025/CENTROS_COMUNITARIOS_2025.shp"
+    if os.path.exists(ruta):
+        try:
+            df = gpd.read_file(ruta).to_crs(epsg=4326)
+            return json.loads(df.to_json())
+        except Exception as e:
+            return {"error": f"Error al procesar centros comunitarios: {str(e)}"}
+    return {"error": "Archivo de centros comunitarios no encontrado"}
 
 @app.post("/procesar")
 async def ejecutar_manual(background_tasks: BackgroundTasks):
